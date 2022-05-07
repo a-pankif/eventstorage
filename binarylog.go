@@ -120,3 +120,31 @@ func (b *binaryLogger) SetAutoFlushTime(period time.Duration) error {
 
 	return nil
 }
+
+func (b *binaryLogger) CloseLogFile() error {
+	return b.logFile.Close()
+}
+
+func (b *binaryLogger) Read(offset int64, count int64) ([]byte, error) {
+	buffer := make([]byte, count)
+
+	if err := b.ReadTo(&buffer, offset); err != nil {
+		return []byte{}, err
+	}
+
+	return buffer, nil
+}
+
+func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64) error {
+	_, err := b.logFile.Seek(offset, 0)
+
+	if err != nil {
+		return err
+	}
+
+	if _, err = b.logFile.Read(*buffer); err != nil {
+		return err
+	}
+
+	return nil
+}
