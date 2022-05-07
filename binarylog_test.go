@@ -7,19 +7,19 @@ import (
 	"testing"
 )
 
-// func BenchmarkLog(b *testing.B) {
-// 	binlog := testsInitBinlog(b)
-// 	raw := []byte("asdf asdf asdf asdf asdf")
-//
-// 	b.ResetTimer()
-//
-// 	for i := 0; i < b.N; i++ {
-// 		binlog.Log(raw)
-// 	}
-//
-// 	b.StopTimer()
-// 	binlog.Flush()
-// }
+func BenchmarkLog(b *testing.B) {
+	binlog := testsInitBinlog(b)
+	raw := []byte("asdf asdf asdf asdf asdf")
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		binlog.Log(raw)
+	}
+
+	b.StopTimer()
+	binlog.Flush()
+}
 
 func BenchmarkReadTo(b *testing.B) {
 	binlog := testsInitBinlog(b)
@@ -67,7 +67,7 @@ func testsInitBinlog(b *testing.B) *binaryLogger {
 
 	b.Cleanup(func() {
 		_ = binlog.logFile.Close()
-		// _ = os.Remove(binlogFullPath)
+		_ = os.Remove(binlogFullPath)
 	})
 
 	return binlog
