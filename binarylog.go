@@ -10,9 +10,10 @@ import (
 	"time"
 )
 
-func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *blogger {
-	b := &blogger{
+func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *binaryLogger {
+	b := &binaryLogger{
 		buf:       new(bytes.Buffer),
+		encodeBuf: make([]byte, 2),
 		logFile:   logFile,
 		errWriter: errWriter,
 		logWriter: logWriter,
@@ -32,31 +33,28 @@ func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *blogger {
 
 	rawLine := strings.NewReplacer(" ", "", "\n", "").Replace(string(lineBuffer))
 	res, _ := hex.DecodeString(rawLine)
-	b.lastLineUsed = len(res)
+	b.lastLineBytesCount = len(res)
 
 	return b
 }
 
-func (b *blogger) Log(data []byte) {
-	dist := new(bytes.Buffer)
-	encodeBuf := make([]byte, 2) // 2 bytes for HEX data, 1 byte takes 2 bytes in HEX
+func (b *binaryLogger) Log(data []byte) {
+	b.bufLock.Lock()
 
 	for i := range data {
-		hex.Encode(encodeBuf, data[i:i+1])
-		dist.Write(encodeBuf)
+		hex.Encode(b.encodeBuf, data[i:i+1])
+		b.buf.Write(b.encodeBuf)
 
-		b.lastLineUsed++
+		b.lastLineBytesCount++
 
-		if b.lastLineUsed >= 16 {
-			dist.Write([]byte{'\n'})
-			b.lastLineUsed = 0
-		} else if b.lastLineUsed%2 == 0 {
-			dist.Write([]byte{' '}) // Group by 2 bytes.
+		if b.lastLineBytesCount >= 16 {
+			b.buf.WriteByte('\n')
+			b.lastLineBytesCount = 0
+		} else if b.lastLineBytesCount%2 == 0 {
+			b.buf.WriteByte(' ') // Group by 2 bytes.
 		}
 	}
 
-	b.bufLock.Lock()
-	b.buf.Write(dist.Bytes())
 	b.insertsCount++
 
 	if b.autoFlushCount > 0 {
@@ -71,7 +69,7 @@ func (b *blogger) Log(data []byte) {
 	}
 }
 
-func (b *blogger) Flush() (count int) {
+func (b *binaryLogger) Flush() (count int) {
 	b.bufLock.Lock()
 
 	if b.insertsCount > 0 {
@@ -88,15 +86,15 @@ func (b *blogger) Flush() (count int) {
 	return
 }
 
-func (b *blogger) SetAutoFlushCount(count int) {
+func (b *binaryLogger) SetAutoFlushCount(count int) {
 	b.autoFlushCount = count
 }
 
-func (b *blogger) GetAutoFlushCount() int {
+func (b *binaryLogger) GetAutoFlushCount() int {
 	return b.autoFlushCount
 }
 
-func (b *blogger) SetAutoFlushTime(period time.Duration) error {
+func (b *binaryLogger) SetAutoFlushTime(period time.Duration) error {
 	if b.autoFlushTime != 0 {
 		return ErrAutoFlushTimeAlreadySet
 	}

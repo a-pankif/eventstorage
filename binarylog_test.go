@@ -21,7 +21,7 @@ func BenchmarkLog(b *testing.B) {
 	binlog.Flush()
 }
 
-func testsInitBinlog(b *testing.B) *blogger {
+func testsInitBinlog(b *testing.B) *binaryLogger {
 	_, base, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(base)
 
