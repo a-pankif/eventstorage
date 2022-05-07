@@ -23,7 +23,7 @@ type binaryLogger struct {
 	errWriter          io.Writer
 	logWriter          io.Writer
 	buf                *bytes.Buffer // For collect encoded data before flush it to file.
-	encodeBuf          []byte        // 2 bytes slice for HEX encoding.
+	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for space or line break.
 	bufLock            sync.Mutex    // Lock buf and encodeBuf vars.
 	insertsCount       int           // Count of logged events.
 	autoFlushCount     int           // Auto flush after N count of log insert, 0 - disable.

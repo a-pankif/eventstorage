@@ -13,7 +13,7 @@ import (
 func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *binaryLogger {
 	b := &binaryLogger{
 		buf:       new(bytes.Buffer),
-		encodeBuf: make([]byte, 2),
+		encodeBuf: make([]byte, 3),
 		logFile:   logFile,
 		errWriter: errWriter,
 		logWriter: logWriter,
@@ -43,16 +43,19 @@ func (b *binaryLogger) Log(data []byte) {
 
 	for i := range data {
 		hex.Encode(b.encodeBuf, data[i:i+1])
-		b.buf.Write(b.encodeBuf)
-
 		b.lastLineBytesCount++
+		l := 2
 
 		if b.lastLineBytesCount >= 16 {
-			b.buf.WriteByte('\n')
+			b.encodeBuf[2] = '\n'
 			b.lastLineBytesCount = 0
+			l++
 		} else if b.lastLineBytesCount%2 == 0 {
-			b.buf.WriteByte(' ') // Group by 2 bytes.
+			b.encodeBuf[2] = ' '
+			l++
 		}
+
+		b.buf.Write(b.encodeBuf[:l])
 	}
 
 	b.insertsCount++
