@@ -125,18 +125,18 @@ func (b *binaryLogger) CloseLogFile() error {
 	return b.logFile.Close()
 }
 
-func (b *binaryLogger) Read(offset int64, count int64) ([]byte, error) {
+func (b *binaryLogger) Read(offset int64, count int64, whence int) ([]byte, error) {
 	buffer := make([]byte, count)
 
-	if err := b.ReadTo(&buffer, offset); err != nil {
+	if err := b.ReadTo(&buffer, offset, whence); err != nil {
 		return []byte{}, err
 	}
 
 	return buffer, nil
 }
 
-func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64) error {
-	_, err := b.logFile.Seek(offset, 0)
+func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
+	_, err := b.logFile.Seek(offset, whence)
 
 	if err != nil {
 		return err
@@ -147,4 +147,22 @@ func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64) error {
 	}
 
 	return nil
+}
+
+func (b *binaryLogger) Decode(data []byte) []byte {
+	pure := make([]byte, 0, len(data)/2) // todo - check length
+
+	for _, v := range data {
+		if v != space && v != lineBreak {
+			pure = append(pure, v)
+		}
+	}
+
+	dist := make([]byte, hex.DecodedLen(len(pure)))
+
+	if _, err := hex.Decode(dist, pure); err != nil {
+		_, _ = fmt.Fprint(b.errWriter, err.Error(), "\n")
+	}
+
+	return dist
 }

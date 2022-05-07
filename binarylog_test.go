@@ -34,7 +34,7 @@ func BenchmarkReadTo(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = binlog.ReadTo(&buffer, 0)
+		_ = binlog.ReadTo(&buffer, 0, 0)
 	}
 }
 
@@ -50,7 +50,7 @@ func BenchmarkRead(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = binlog.Read(0, 1000000)
+		_, _ = binlog.Read(0, 1000000, 0)
 	}
 }
 

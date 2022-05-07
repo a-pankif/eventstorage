@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/pankif/binarylog"
 	"os"
@@ -14,10 +15,19 @@ func main() {
 		_ = binlog.CloseLogFile()
 	}()
 
-	// binlog.Log([]byte("its binlog row "))
+	binlog.Log([]byte("its binlog row "))
 
-	data, _ := binlog.Read(0, 13)
+	data, _ := binlog.Read(0, 99, 0)
+	decoded := binlog.Decode(data)
+
 	fmt.Println(string(data))
-	data, _ = binlog.Read(0, 10)
-	fmt.Println(string(data))
+	fmt.Println(decoded)
+	fmt.Println(string(decoded))
+}
+
+func interest() {
+	g, _ := hex.DecodeString("1") // 67 in HEX is 'g' char, 6 or 7 (or some wrong symbol) decode from hex return zero length result
+	fmt.Println(string(g))
+	fmt.Println(len(g))
+	fmt.Println(len(string(g)))
 }

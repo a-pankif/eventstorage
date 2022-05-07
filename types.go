@@ -14,8 +14,10 @@ const (
 )
 
 var (
-	ErrAutoFlushTimeAlreadySet = errors.New("autoFlushTime already set")
-	ErrAutoFlushTimeTooLow     = errors.New("autoFlushTime too low value")
+	ErrAutoFlushTimeAlreadySet      = errors.New("autoFlushTime already set")
+	ErrAutoFlushTimeTooLow          = errors.New("autoFlushTime too low value")
+	space                      byte = ' '
+	lineBreak                  byte = '\n'
 )
 
 type binaryLogger struct {
