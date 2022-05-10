@@ -38,7 +38,7 @@ func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *binaryLogg
 	return b
 }
 
-func (b *binaryLogger) Log(data []byte) {
+func (b *binaryLogger) insertData(data []byte) {
 	b.bufLock.Lock()
 
 	for i := range data {
@@ -57,6 +57,14 @@ func (b *binaryLogger) Log(data []byte) {
 
 		b.buf.Write(b.encodeBuf[:l])
 	}
+
+	b.bufLock.Unlock()
+}
+
+func (b *binaryLogger) Log(data []byte) {
+	b.insertData(data)
+	b.insertData(RowDelimiter)
+	b.bufLock.Lock()
 
 	b.insertsCount++
 
@@ -149,11 +157,23 @@ func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
 	return nil
 }
 
-func (b *binaryLogger) Decode(data []byte) []byte {
-	pure := make([]byte, 0, len(data)/2) // todo - check length
+func (b *binaryLogger) DecodeLen(data []byte) int {
+	dataLen := 0
 
 	for _, v := range data {
-		if v != space && v != lineBreak {
+		if v != Space && v != LineBreak && v != EmptyByte {
+			dataLen++
+		}
+	}
+
+	return dataLen
+}
+
+func (b *binaryLogger) Decode(data []byte) []byte {
+	pure := make([]byte, 0, len(data))
+
+	for _, v := range data {
+		if v != Space && v != LineBreak && v != EmptyByte {
 			pure = append(pure, v)
 		}
 	}

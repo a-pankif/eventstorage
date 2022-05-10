@@ -16,8 +16,10 @@ const (
 var (
 	ErrAutoFlushTimeAlreadySet      = errors.New("autoFlushTime already set")
 	ErrAutoFlushTimeTooLow          = errors.New("autoFlushTime too low value")
-	space                      byte = ' '
-	lineBreak                  byte = '\n'
+	Space                      byte = ' '
+	LineBreak                  byte = '\n'
+	EmptyByte                  byte = 0
+	RowDelimiter                    = []byte{EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte}
 )
 
 type binaryLogger struct {
@@ -25,7 +27,7 @@ type binaryLogger struct {
 	errWriter          io.Writer
 	logWriter          io.Writer
 	buf                *bytes.Buffer // For collect encoded data before flush it to file.
-	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for space or line break.
+	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or line break.
 	bufLock            sync.Mutex    // Lock buf and encodeBuf vars.
 	insertsCount       int           // Count of logged events.
 	autoFlushCount     int           // Auto flush after N count of log insert, 0 - disable.

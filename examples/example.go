@@ -17,11 +17,9 @@ func main() {
 
 	binlog.Log([]byte("its binlog row "))
 
-	data, _ := binlog.Read(0, 99, 0)
+	data, err := binlog.Read(0, 99, 0)
+	fmt.Println(err)
 	decoded := binlog.Decode(data)
-
-	fmt.Println(string(data))
-	fmt.Println(decoded)
 	fmt.Println(string(decoded))
 }
 
