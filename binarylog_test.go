@@ -76,15 +76,14 @@ func testsInitBinlog(b *testing.B) *binaryLogger {
 	basepath := filepath.Dir(base)
 
 	binlogPath := basepath + string(os.PathSeparator) + "testdata"
-	binlogFullPath := binlogPath + string(os.PathSeparator) + "test-binlog.1"
 	_ = os.MkdirAll(binlogPath, 0755)
 
-	binlogFile, _ := os.OpenFile(binlogFullPath, os.O_CREATE|os.O_APPEND, 0644)
-	binlog := New(binlogFile, os.Stderr, os.Stdout)
+	binlog, _ := New(binlogPath, os.Stderr, os.Stdout)
+	binlog.SetLogFileSize(1000 * MB)
 
 	b.Cleanup(func() {
-		_ = binlog.logFile.Close()
-		_ = os.Remove(binlogFullPath)
+		_ = binlog.currentLogFile.Close()
+		// _ = os.Remove(binlogPath)
 	})
 
 	return binlog

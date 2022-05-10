@@ -10,20 +10,33 @@ import (
 )
 
 const (
-	lineLength = 40
+	lineLength            = 40
+	Space            byte = ' '
+	LineBreak        byte = '\n'
+	EmptyByte        byte = 0
+	registryFileName      = "binlog.registry"
+)
+
+const (
+	KB int64 = 1 << 10
+	MB int64 = 1 << 20
 )
 
 var (
-	ErrAutoFlushTimeAlreadySet      = errors.New("autoFlushTime already set")
-	ErrAutoFlushTimeTooLow          = errors.New("autoFlushTime too low value")
-	Space                      byte = ' '
-	LineBreak                  byte = '\n'
-	EmptyByte                  byte = 0
-	RowDelimiter                    = []byte{EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte}
+	ErrAutoFlushTimeAlreadySet = errors.New("autoFlushTime already set")
+	ErrAutoFlushTimeTooLow     = errors.New("autoFlushTime too low value")
+	ErrLogNotInited            = errors.New("log init failed")
+	logFileTemplate            = "binlog.%d"
+	RowDelimiter               = []byte{EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte}
 )
 
 type binaryLogger struct {
-	logFile            *os.File
+	basePath           string
+	currentLogFile     *os.File
+	logFilesRegistry   *os.File
+	logFilesCount      int   // Count of created log files
+	logFileMaxSize     int64 // Size of log file for create a new file
+	currenLogFileSize  int64
 	errWriter          io.Writer
 	logWriter          io.Writer
 	buf                *bytes.Buffer // For collect encoded data before flush it to file.

@@ -5,25 +5,34 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 )
 
-func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *binaryLogger {
+func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogger, error) {
 	b := &binaryLogger{
-		buf:       new(bytes.Buffer),
-		encodeBuf: make([]byte, 3),
-		logFile:   logFile,
-		errWriter: errWriter,
-		logWriter: logWriter,
+		basePath:       basePath,
+		buf:            new(bytes.Buffer),
+		encodeBuf:      make([]byte, 3),
+		logFilesCount:  0,
+		logFileMaxSize: 100 * MB,
+		errWriter:      errWriter,
+		logWriter:      logWriter,
 	}
 
-	info, _ := logFile.Stat()
+	b.initRegistryFile()
+	b.initCurrenLogFile()
+
+	if b.currentLogFile == nil {
+		return nil, ErrLogNotInited
+	}
+
+	b.currenLogFileSize = b.calculateCurrenLogFileSize()
+
 	lineBytesUsed := 0
-	lastLine := info.Size() / lineLength
+	lastLine := b.currenLogFileSize / lineLength
 	lineBuffer := make([]byte, lineLength)
-	_, _ = logFile.ReadAt(lineBuffer, lastLine*lineLength)
+	_, _ = b.currentLogFile.ReadAt(lineBuffer, lastLine*lineLength)
 
 	for _, v := range lineBuffer {
 		if v != 0 {
@@ -35,16 +44,17 @@ func New(logFile *os.File, errWriter io.Writer, logWriter io.Writer) *binaryLogg
 	res, _ := hex.DecodeString(rawLine)
 	b.lastLineBytesCount = len(res)
 
-	return b
+	return b, nil
 }
 
-func (b *binaryLogger) insertData(data []byte) {
-	b.bufLock.Lock()
+func (b *binaryLogger) insertData(data []byte) int64 {
+	var dataLen int64 = 0
 
 	for i := range data {
+		var l int64 = 2
+
 		hex.Encode(b.encodeBuf, data[i:i+1])
 		b.lastLineBytesCount++
-		l := 2
 
 		if b.lastLineBytesCount >= 16 {
 			b.encodeBuf[2] = '\n'
@@ -55,17 +65,29 @@ func (b *binaryLogger) insertData(data []byte) {
 			l++
 		}
 
+		dataLen += l
 		b.buf.Write(b.encodeBuf[:l])
 	}
 
-	b.bufLock.Unlock()
+	return dataLen
 }
 
 func (b *binaryLogger) Log(data []byte) {
-	b.insertData(data)
-	b.insertData(RowDelimiter)
+	if b.currenLogFileSize >= b.logFileMaxSize {
+		b.Flush()
+
+		b.bufLock.Lock()
+		b.rotateCurrenLogFile()
+		b.bufLock.Unlock()
+	}
+
 	b.bufLock.Lock()
 
+	var dataLen int64 = 0
+
+	dataLen += b.insertData(data)
+	dataLen += b.insertData(RowDelimiter)
+	b.currenLogFileSize += dataLen
 	b.insertsCount++
 
 	if b.autoFlushCount > 0 {
@@ -81,10 +103,12 @@ func (b *binaryLogger) Log(data []byte) {
 }
 
 func (b *binaryLogger) Flush() (count int) {
+	// todo - err for check nil log file
+
 	b.bufLock.Lock()
 
 	if b.insertsCount > 0 {
-		if _, err := b.logFile.Write(b.buf.Bytes()); err != nil {
+		if _, err := b.currentLogFile.Write(b.buf.Bytes()); err != nil {
 			_, _ = fmt.Fprint(b.errWriter, err.Error(), "\n")
 		} else {
 			b.buf.Truncate(0)
@@ -129,10 +153,6 @@ func (b *binaryLogger) SetAutoFlushTime(period time.Duration) error {
 	return nil
 }
 
-func (b *binaryLogger) CloseLogFile() error {
-	return b.logFile.Close()
-}
-
 func (b *binaryLogger) Read(offset int64, count int64, whence int) ([]byte, error) {
 	buffer := make([]byte, count)
 
@@ -144,13 +164,13 @@ func (b *binaryLogger) Read(offset int64, count int64, whence int) ([]byte, erro
 }
 
 func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
-	_, err := b.logFile.Seek(offset, whence)
+	_, err := b.currentLogFile.Seek(offset, whence)
 
 	if err != nil {
 		return err
 	}
 
-	if _, err = b.logFile.Read(*buffer); err != nil {
+	if _, err = b.currentLogFile.Read(*buffer); err != nil {
 		return err
 	}
 
