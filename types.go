@@ -32,18 +32,22 @@ var (
 
 type binaryLogger struct {
 	basePath           string
-	currentLogFile     *os.File
-	logFilesRegistry   *os.File
-	logFilesCount      int   // Count of created log files
-	logFileMaxSize     int64 // Size of log file for create a new file
-	currenLogFileSize  int64
-	errWriter          io.Writer
-	logWriter          io.Writer
+	logFile            *os.File      // Current log file to write logs
+	logFilesRegistry   *os.File      // File with list of exists log files
+	logFilesMap        logFilesMap   // Map presentation of log files registry
+	logFilesCount      int           // Count of created log files
+	logFileMaxSize     int64         // Size of log file for create a new file
+	logFileSize        int64         // Size of current log file
 	buf                *bytes.Buffer // For collect encoded data before flush it to file.
-	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or line break.
+	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or LineBreak.
 	bufLock            sync.Mutex    // Lock buf and encodeBuf vars.
-	insertsCount       int           // Count of logged events.
+	insertsCount       int           // Count of logged events, from last data flush
 	autoFlushCount     int           // Auto flush after N count of log insert, 0 - disable.
 	autoFlushTime      time.Duration // Auto flush every N seconds, 0 - disable.
 	lastLineBytesCount int           // Number of bytes in the last line: only pure bytes (not hex encoded), without spaces and line breaks.
+
+	errWriter io.Writer
+	logWriter io.Writer
 }
+
+type logFilesMap map[int]string

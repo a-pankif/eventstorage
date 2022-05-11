@@ -14,6 +14,7 @@ func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogg
 		basePath:       basePath,
 		buf:            new(bytes.Buffer),
 		encodeBuf:      make([]byte, 3),
+		logFilesMap:    make(logFilesMap),
 		logFilesCount:  0,
 		logFileMaxSize: 100 * MB,
 		errWriter:      errWriter,
@@ -21,18 +22,18 @@ func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogg
 	}
 
 	b.initRegistryFile()
-	b.initCurrenLogFile()
+	b.initLogFile()
 
-	if b.currentLogFile == nil {
+	if b.logFile == nil {
 		return nil, ErrLogNotInited
 	}
 
-	b.currenLogFileSize = b.calculateCurrenLogFileSize()
+	b.logFileSize = b.calculateLogFileSize()
 
 	lineBytesUsed := 0
-	lastLine := b.currenLogFileSize / lineLength
+	lastLine := b.logFileSize / lineLength
 	lineBuffer := make([]byte, lineLength)
-	_, _ = b.currentLogFile.ReadAt(lineBuffer, lastLine*lineLength)
+	_, _ = b.logFile.ReadAt(lineBuffer, lastLine*lineLength)
 
 	for _, v := range lineBuffer {
 		if v != 0 {
@@ -73,11 +74,11 @@ func (b *binaryLogger) insertData(data []byte) int64 {
 }
 
 func (b *binaryLogger) Log(data []byte) {
-	if b.currenLogFileSize >= b.logFileMaxSize {
+	if b.logFileSize >= b.logFileMaxSize {
 		b.Flush()
 
 		b.bufLock.Lock()
-		b.rotateCurrenLogFile()
+		b.rotateLogFile()
 		b.bufLock.Unlock()
 	}
 
@@ -87,7 +88,7 @@ func (b *binaryLogger) Log(data []byte) {
 
 	dataLen += b.insertData(data)
 	dataLen += b.insertData(RowDelimiter)
-	b.currenLogFileSize += dataLen
+	b.logFileSize += dataLen
 	b.insertsCount++
 
 	if b.autoFlushCount > 0 {
@@ -108,7 +109,7 @@ func (b *binaryLogger) Flush() (count int) {
 	b.bufLock.Lock()
 
 	if b.insertsCount > 0 {
-		if _, err := b.currentLogFile.Write(b.buf.Bytes()); err != nil {
+		if _, err := b.logFile.Write(b.buf.Bytes()); err != nil {
 			_, _ = fmt.Fprint(b.errWriter, err.Error(), "\n")
 		} else {
 			b.buf.Truncate(0)
@@ -164,13 +165,13 @@ func (b *binaryLogger) Read(offset int64, count int64, whence int) ([]byte, erro
 }
 
 func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
-	_, err := b.currentLogFile.Seek(offset, whence)
+	_, err := b.logFile.Seek(offset, whence)
 
 	if err != nil {
 		return err
 	}
 
-	if _, err = b.currentLogFile.Read(*buffer); err != nil {
+	if _, err = b.logFile.Read(*buffer); err != nil {
 		return err
 	}
 

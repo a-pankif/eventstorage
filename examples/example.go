@@ -15,9 +15,10 @@ func main() {
 		_ = binlog.CloseLogFile()
 	}()
 
-	binlog.Log([]byte("its binlog row "))
-	binlog.Log([]byte("its binlog row "))
 	return
+
+	binlog.Log([]byte("its binlog row "))
+	binlog.Log([]byte("its binlog row "))
 
 	data, err := binlog.Read(0, 99, 0)
 	fmt.Println(err)

@@ -82,7 +82,7 @@ func testsInitBinlog(b *testing.B) *binaryLogger {
 	binlog.SetLogFileSize(1000 * MB)
 
 	b.Cleanup(func() {
-		_ = binlog.currentLogFile.Close()
+		_ = binlog.logFile.Close()
 		// _ = os.Remove(binlogPath)
 	})
 
