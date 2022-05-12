@@ -10,7 +10,7 @@ import (
 func main() {
 	binlog, _ := binarylog.New("./", os.Stderr, os.Stdout)
 	binlog.SetAutoFlushCount(1)
-	binlog.SetLogFileSize(binarylog.KB)
+	binlog.SetLogFileMaxSize(binarylog.KB)
 	defer func() {
 		_ = binlog.CloseLogFile()
 	}()

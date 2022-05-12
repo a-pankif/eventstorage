@@ -8,7 +8,7 @@ import (
 )
 
 func BenchmarkLog(b *testing.B) {
-	binlog := testsInitBinlog(b)
+	binlog := benchmarksInitBinlog(b)
 	raw := []byte("asdf asdf asdf asdf asdf")
 
 	b.ResetTimer()
@@ -23,8 +23,8 @@ func BenchmarkLog(b *testing.B) {
 
 func BenchmarkReadTo(b *testing.B) {
 	buffer := make([]byte, 1000000)
-	binlog := testsInitBinlog(b)
-	testsFillBinlog(binlog, b)
+	binlog := benchmarksInitBinlog(b)
+	benchmarksFillBinlog(binlog, b)
 
 	for i := 0; i < b.N; i++ {
 		_ = binlog.ReadTo(&buffer, 0, 0)
@@ -32,8 +32,8 @@ func BenchmarkReadTo(b *testing.B) {
 }
 
 func BenchmarkRead(b *testing.B) {
-	binlog := testsInitBinlog(b)
-	testsFillBinlog(binlog, b)
+	binlog := benchmarksInitBinlog(b)
+	benchmarksFillBinlog(binlog, b)
 
 	for i := 0; i < b.N; i++ {
 		_, _ = binlog.Read(0, 1000000, 0)
@@ -41,8 +41,8 @@ func BenchmarkRead(b *testing.B) {
 }
 
 func BenchmarkDecodeLen(b *testing.B) {
-	binlog := testsInitBinlog(b)
-	testsFillBinlog(binlog, b)
+	binlog := benchmarksInitBinlog(b)
+	benchmarksFillBinlog(binlog, b)
 	data, _ := binlog.Read(0, 1000000, 0)
 
 	for i := 0; i < b.N; i++ {
@@ -51,8 +51,8 @@ func BenchmarkDecodeLen(b *testing.B) {
 }
 
 func BenchmarkDecode(b *testing.B) {
-	binlog := testsInitBinlog(b)
-	testsFillBinlog(binlog, b)
+	binlog := benchmarksInitBinlog(b)
+	benchmarksFillBinlog(binlog, b)
 	data, _ := binlog.Read(0, 1000000, 0)
 
 	for i := 0; i < b.N; i++ {
@@ -60,7 +60,7 @@ func BenchmarkDecode(b *testing.B) {
 	}
 }
 
-func testsFillBinlog(binlog *binaryLogger, b *testing.B) {
+func benchmarksFillBinlog(binlog *binaryLogger, b *testing.B) {
 	raw := []byte("some data for tests ")
 
 	for i := 0; i < 10000; i++ { // ~2 MB of data
@@ -71,7 +71,7 @@ func testsFillBinlog(binlog *binaryLogger, b *testing.B) {
 	b.ResetTimer()
 }
 
-func testsInitBinlog(b *testing.B) *binaryLogger {
+func benchmarksInitBinlog(b *testing.B) *binaryLogger {
 	_, base, _, _ := runtime.Caller(0)
 	basepath := filepath.Dir(base)
 
@@ -79,11 +79,11 @@ func testsInitBinlog(b *testing.B) *binaryLogger {
 	_ = os.MkdirAll(binlogPath, 0755)
 
 	binlog, _ := New(binlogPath, os.Stderr, os.Stdout)
-	binlog.SetLogFileSize(1000 * MB)
+	binlog.SetLogFileMaxSize(1000 * MB)
 
 	b.Cleanup(func() {
 		_ = binlog.logFile.Close()
-		// _ = os.Remove(binlogPath)
+		_ = os.Remove(binlogPath)
 	})
 
 	return binlog

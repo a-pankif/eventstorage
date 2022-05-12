@@ -25,7 +25,6 @@ const (
 var (
 	ErrAutoFlushTimeAlreadySet = errors.New("autoFlushTime already set")
 	ErrAutoFlushTimeTooLow     = errors.New("autoFlushTime too low value")
-	ErrLogNotInited            = errors.New("log init failed")
 	logFileTemplate            = "binlog.%d"
 	RowDelimiter               = []byte{EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte}
 )

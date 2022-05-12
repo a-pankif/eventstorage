@@ -21,11 +21,12 @@ func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogg
 		logWriter:      logWriter,
 	}
 
-	b.initRegistryFile()
-	b.initLogFile()
+	if err := b.initRegistryFile(); err != nil {
+		return nil, err
+	}
 
-	if b.logFile == nil {
-		return nil, ErrLogNotInited
+	if err := b.initLogFile(); err != nil {
+		return nil, err
 	}
 
 	b.logFileSize = b.calculateLogFileSize()

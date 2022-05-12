@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
-	"strings"
 )
 
 func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, error) {
@@ -25,29 +23,30 @@ func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, e
 	return os.OpenFile(filePath, os.O_CREATE|os.O_APPEND, 0644)
 }
 
-func (b *binaryLogger) rotateLogFile() {
+func (b *binaryLogger) rotateLogFile() error {
 	b.logFilesCount++
 
 	if err := b.logFile.Close(); err != nil {
-		b.logErrorString("Failed close old log file: " + err.Error())
+		return errors.New("failed close old log file: " + err.Error())
 	}
 
+	b.logFile = nil
 	logFile, err := b.openLogFile(b.logFilesCount, true)
 
-	if err == nil {
-		b.logFile = logFile
-		b.logFileSize = 0
-		b.lastLineBytesCount = 0
-	} else {
-		b.logFile = nil
-		b.logErrorString("Failed to init log file file: " + err.Error())
+	if err != nil {
+		return errors.New("failed to init log file file: " + err.Error())
 	}
+
+	b.logFile = logFile
+	b.logFileSize = 0
+	b.lastLineBytesCount = 0
+
+	return nil
 }
 
-func (b *binaryLogger) initLogFile() {
+func (b *binaryLogger) initLogFile() error {
 	if b.logFilesRegistry == nil {
-		b.logErrorString("Cant init log file without registry.")
-		return
+		return errors.New("cant init log file without registry")
 	}
 
 	needAppendRegistry := false
@@ -63,41 +62,30 @@ func (b *binaryLogger) initLogFile() {
 	if err == nil {
 		b.logFile = logFile
 	} else {
-		b.logErrorString("Failed to init log file file: " + err.Error())
+		return errors.New("Failed to init log file file: " + err.Error())
 	}
+
+	return nil
 }
 
-func (b *binaryLogger) initRegistryFile() {
+func (b *binaryLogger) initRegistryFile() error {
 	filePath := b.basePath + string(os.PathSeparator) + registryFileName
 	registry, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND, 0644)
 
 	if err == nil {
 		b.logFilesRegistry = registry
 	} else {
-		b.logErrorString("Failed to init registry file: " + err.Error())
-		return
+		return errors.New("Failed to init registry file: " + err.Error())
 	}
 
-	reader := bufio.NewReader(b.logFilesRegistry)
+	scanner := bufio.NewScanner(b.logFilesRegistry)
 
-	for {
-		line, err := reader.ReadString(LineBreak)
-		if err != nil && err != io.EOF {
-			b.logErrorString("Error while parse log registry: " + err.Error())
-			break
-		}
-
-		line = strings.NewReplacer("\n", "", "\r", "").Replace(line)
-
-		if len(line) > 0 {
-			b.logFilesCount++
-			b.logFilesMap[b.logFilesCount] = line
-		}
-
-		if err == io.EOF {
-			break
-		}
+	for scanner.Scan() {
+		b.logFilesCount++
+		b.logFilesMap[b.logFilesCount] = scanner.Text()
 	}
+
+	return nil
 }
 
 func (b *binaryLogger) calculateLogFileSize() int64 {
@@ -109,7 +97,7 @@ func (b *binaryLogger) getLastLogFileName() string {
 	return b.logFilesMap[b.logFilesCount]
 }
 
-func (b *binaryLogger) SetLogFileSize(size int64) {
+func (b *binaryLogger) SetLogFileMaxSize(size int64) {
 	b.logFileMaxSize = size
 }
 
