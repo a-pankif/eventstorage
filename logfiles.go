@@ -24,6 +24,9 @@ func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, e
 }
 
 func (b *binaryLogger) rotateLogFile() error {
+	b.locker.Lock()
+	defer b.locker.Unlock()
+
 	b.logFilesCount++
 
 	if err := b.logFile.Close(); err != nil {
@@ -103,6 +106,11 @@ func (b *binaryLogger) SetLogFileMaxSize(size int64) {
 
 func (b *binaryLogger) CloseLogFile() error {
 	return b.logFile.Close()
+}
+
+func (b *binaryLogger) Shutdown() {
+	_ = b.logFile.Close()
+	_ = b.logFilesRegistry.Close()
 }
 
 func (b *binaryLogger) logErrorString(err string) {

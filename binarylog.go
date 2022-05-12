@@ -3,13 +3,13 @@ package binarylog
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"io"
 	"strings"
 	"time"
 )
 
-func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogger, error) {
+func New(basePath string, errWriter io.Writer) (*binaryLogger, error) {
 	b := &binaryLogger{
 		basePath:       basePath,
 		buf:            new(bytes.Buffer),
@@ -18,7 +18,6 @@ func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogg
 		logFilesCount:  0,
 		logFileMaxSize: 100 * MB,
 		errWriter:      errWriter,
-		logWriter:      logWriter,
 	}
 
 	if err := b.initRegistryFile(); err != nil {
@@ -31,16 +30,9 @@ func New(basePath string, errWriter io.Writer, logWriter io.Writer) (*binaryLogg
 
 	b.logFileSize = b.calculateLogFileSize()
 
-	lineBytesUsed := 0
 	lastLine := b.logFileSize / lineLength
 	lineBuffer := make([]byte, lineLength)
 	_, _ = b.logFile.ReadAt(lineBuffer, lastLine*lineLength)
-
-	for _, v := range lineBuffer {
-		if v != 0 {
-			lineBytesUsed++
-		}
-	}
 
 	rawLine := strings.NewReplacer(" ", "", "\n", "").Replace(string(lineBuffer))
 	res, _ := hex.DecodeString(rawLine)
@@ -74,44 +66,52 @@ func (b *binaryLogger) insertData(data []byte) int64 {
 	return dataLen
 }
 
-func (b *binaryLogger) Log(data []byte) {
+func (b *binaryLogger) Log(data []byte) (count int64, err error) {
 	if b.logFileSize >= b.logFileMaxSize {
-		b.Flush()
+		if _, err := b.Flush(); err != nil {
+			return 0, err
+		}
 
-		b.bufLock.Lock()
-		b.rotateLogFile()
-		b.bufLock.Unlock()
+		if err := b.rotateLogFile(); err != nil {
+			return 0, err
+		}
 	}
 
-	b.bufLock.Lock()
+	b.locker.Lock()
 
-	var dataLen int64 = 0
+	var writeLen int64 = 0
 
-	dataLen += b.insertData(data)
-	dataLen += b.insertData(RowDelimiter)
-	b.logFileSize += dataLen
+	writeLen += b.insertData(data)
+	writeLen += b.insertData(RowDelimiter)
+	b.logFileSize += writeLen
 	b.insertsCount++
 
 	if b.autoFlushCount > 0 {
 		if b.insertsCount >= b.autoFlushCount {
-			b.bufLock.Unlock()
-			b.Flush()
+			b.locker.Unlock()
+
+			if _, err := b.Flush(); err != nil {
+				return 0, err
+			}
 		} else {
-			b.bufLock.Unlock()
+			b.locker.Unlock()
 		}
 	} else {
-		b.bufLock.Unlock()
+		b.locker.Unlock()
 	}
+
+	return writeLen, nil
 }
 
-func (b *binaryLogger) Flush() (count int) {
+func (b *binaryLogger) Flush() (count int, err error) {
 	// todo - err for check nil log file
 
-	b.bufLock.Lock()
+	b.locker.Lock()
+	defer b.locker.Unlock()
 
 	if b.insertsCount > 0 {
 		if _, err := b.logFile.Write(b.buf.Bytes()); err != nil {
-			_, _ = fmt.Fprint(b.errWriter, err.Error(), "\n")
+			return 0, errors.New("flush failed: " + err.Error())
 		} else {
 			b.buf.Truncate(0)
 			count = b.insertsCount
@@ -119,7 +119,6 @@ func (b *binaryLogger) Flush() (count int) {
 		}
 	}
 
-	b.bufLock.Unlock()
 	return
 }
 
@@ -144,10 +143,9 @@ func (b *binaryLogger) SetAutoFlushTime(period time.Duration) error {
 
 	go func() {
 		for range time.Tick(period) {
-			count := b.Flush()
-
-			if count > 0 {
-				_, _ = fmt.Fprintf(b.logWriter, "Flushed by time: %d.\n", count)
+			// todo - support Shutdown function to exit from gorutine
+			if _, err := b.Flush(); err != nil {
+				b.logErrorString("time flush failed: " + err.Error())
 			}
 		}
 	}()
@@ -179,19 +177,7 @@ func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
 	return nil
 }
 
-func (b *binaryLogger) DecodeLen(data []byte) int {
-	dataLen := 0
-
-	for _, v := range data {
-		if v != Space && v != LineBreak && v != EmptyByte {
-			dataLen++
-		}
-	}
-
-	return dataLen
-}
-
-func (b *binaryLogger) Decode(data []byte) []byte {
+func (b *binaryLogger) Decode(data []byte) ([]byte, error) {
 	pure := make([]byte, 0, len(data))
 
 	for _, v := range data {
@@ -203,8 +189,8 @@ func (b *binaryLogger) Decode(data []byte) []byte {
 	dist := make([]byte, hex.DecodedLen(len(pure)))
 
 	if _, err := hex.Decode(dist, pure); err != nil {
-		_, _ = fmt.Fprint(b.errWriter, err.Error(), "\n")
+		return dist, err
 	}
 
-	return dist
+	return dist, nil
 }

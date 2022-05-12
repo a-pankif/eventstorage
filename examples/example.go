@@ -8,17 +8,16 @@ import (
 )
 
 func main() {
-	binlog, _ := binarylog.New("./", os.Stderr, os.Stdout)
+	binlog, _ := binarylog.New("./", os.Stderr)
 	binlog.SetAutoFlushCount(1)
 	binlog.SetLogFileMaxSize(binarylog.KB)
 	defer func() {
 		_ = binlog.CloseLogFile()
 	}()
 
+	binlog.Log([]byte([]byte{0, 0, 0}))
+	// binlog.Log([]byte("its binlog row "))
 	return
-
-	binlog.Log([]byte("its binlog row "))
-	binlog.Log([]byte("its binlog row "))
 
 	data, err := binlog.Read(0, 99, 0)
 	fmt.Println(err)

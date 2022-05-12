@@ -39,14 +39,13 @@ type binaryLogger struct {
 	logFileSize        int64         // Size of current log file
 	buf                *bytes.Buffer // For collect encoded data before flush it to file.
 	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or LineBreak.
-	bufLock            sync.Mutex    // Lock buf and encodeBuf vars.
+	locker             sync.Mutex    // Common variables lock to avoid race condition.
 	insertsCount       int           // Count of logged events, from last data flush
 	autoFlushCount     int           // Auto flush after N count of log insert, 0 - disable.
 	autoFlushTime      time.Duration // Auto flush every N seconds, 0 - disable.
 	lastLineBytesCount int           // Number of bytes in the last line: only pure bytes (not hex encoded), without spaces and line breaks.
 
 	errWriter io.Writer
-	logWriter io.Writer
 }
 
 type logFilesMap map[int]string
