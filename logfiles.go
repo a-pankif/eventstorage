@@ -24,9 +24,6 @@ func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, e
 }
 
 func (b *binaryLogger) rotateLogFile() error {
-	b.locker.Lock()
-	defer b.locker.Unlock()
-
 	b.logFilesCount++
 
 	if err := b.logFile.Close(); err != nil {

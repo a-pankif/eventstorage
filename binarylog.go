@@ -66,48 +66,36 @@ func (b *binaryLogger) insertData(data []byte) int64 {
 	return dataLen
 }
 
-func (b *binaryLogger) Log(data []byte) (count int64, err error) {
-	if b.logFileSize >= b.logFileMaxSize {
-		if _, err := b.Flush(); err != nil {
-			return 0, err
-		}
-
-		if err := b.rotateLogFile(); err != nil {
-			return 0, err
-		}
-	}
-
-	b.locker.Lock()
-
-	var writeLen int64 = 0
-
-	writeLen += b.insertData(data)
-	writeLen += b.insertData(RowDelimiter)
-	b.logFileSize += writeLen
-	b.insertsCount++
-
-	if b.autoFlushCount > 0 {
-		if b.insertsCount >= b.autoFlushCount {
-			b.locker.Unlock()
-
-			if _, err := b.Flush(); err != nil {
-				return 0, err
-			}
-		} else {
-			b.locker.Unlock()
-		}
-	} else {
-		b.locker.Unlock()
-	}
-
-	return writeLen, nil
-}
-
-func (b *binaryLogger) Flush() (count int, err error) {
-	// todo - err for check nil log file
-
+func (b *binaryLogger) Log(data []byte) (writtenLen int64, err error) {
 	b.locker.Lock()
 	defer b.locker.Unlock()
+
+	writtenLen = b.insertData(data)
+	writtenLen += b.insertData(RowDelimiter)
+	b.logFileSize += writtenLen
+	b.insertsCount++
+
+	if b.autoFlushCount > 0 && b.insertsCount >= b.autoFlushCount {
+		if _, err = b.flush(); err != nil {
+			return
+		}
+	}
+
+	if b.logFileSize >= b.logFileMaxSize {
+		if _, err = b.flush(); err != nil {
+			return
+		}
+
+		if err = b.rotateLogFile(); err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func (b *binaryLogger) flush() (count int, err error) {
+	// todo - err for check nil log file
 
 	if b.insertsCount > 0 {
 		if _, err := b.logFile.Write(b.buf.Bytes()); err != nil {
@@ -120,6 +108,12 @@ func (b *binaryLogger) Flush() (count int, err error) {
 	}
 
 	return
+}
+
+func (b *binaryLogger) Flush() (count int, err error) {
+	b.locker.Lock()
+	defer b.locker.Unlock()
+	return b.flush()
 }
 
 func (b *binaryLogger) SetAutoFlushCount(count int) {

@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	fmt.Println(os.TempDir())
 	binlog, _ := binarylog.New("./", os.Stderr)
 	binlog.SetAutoFlushCount(1)
 	binlog.SetLogFileMaxSize(binarylog.KB)
@@ -15,13 +16,13 @@ func main() {
 		_ = binlog.CloseLogFile()
 	}()
 
-	binlog.Log([]byte([]byte{0, 0, 0}))
-	// binlog.Log([]byte("its binlog row "))
+	// binlog.Log([]byte([]byte{0, 0, 0}))
+	binlog.Log([]byte("its binlog row "))
 	return
 
 	data, err := binlog.Read(0, 99, 0)
 	fmt.Println(err)
-	decoded := binlog.Decode(data)
+	decoded, _ := binlog.Decode(data)
 	fmt.Println(string(decoded))
 }
 

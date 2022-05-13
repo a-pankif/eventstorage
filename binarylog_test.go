@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -34,6 +35,73 @@ func TestNew(t *testing.T) {
 	}
 
 	t.Cleanup(binlog.Shutdown)
+}
+
+func Test_binaryLogger_LogCheckRotate(t *testing.T) {
+	binlog, _ := New(t.TempDir(), os.Stderr)
+	binlog.SetLogFileMaxSize(1)
+	t.Cleanup(binlog.Shutdown)
+
+	_, _ = binlog.Log([]byte("some data"))
+
+	if binlog.calculateLogFileSize() != 0 {
+		t.Errorf("LogCheckRotate expect create new log file, its must be empty after rotate")
+		return
+	}
+
+	if len(binlog.buf.Bytes()) > 0 {
+		t.Errorf("LogCheckRotate expect flush before log rotate")
+	}
+
+	expectedMap := logFilesMap{1: "binlog.1", 2: "binlog.2"}
+	isEqual := reflect.DeepEqual(binlog.logFilesMap, expectedMap)
+
+	if !isEqual {
+		t.Errorf("LogCheckRotate not equal expected logFilesMap (%v), got %v", expectedMap, binlog.logFilesMap)
+	}
+}
+
+func Test_binaryLogger_autoFlushCount(t *testing.T) {
+	binlog, _ := New(t.TempDir(), os.Stderr)
+	binlog.SetAutoFlushCount(1)
+	t.Cleanup(binlog.Shutdown)
+
+	_, _ = binlog.Log([]byte{0})
+
+	if binlog.calculateLogFileSize() == 0 {
+		t.Errorf("autoFlushCount failed, expected to flush")
+	}
+}
+
+func Test_binaryLogger_autoFlushCountFailedFlush(t *testing.T) {
+	binlog := binaryLogger{
+		buf:            new(bytes.Buffer),
+		encodeBuf:      make([]byte, 3),
+		logFileMaxSize: MB,
+	}
+
+	binlog.SetAutoFlushCount(1)
+	t.Cleanup(binlog.Shutdown)
+
+	if _, err := binlog.Log([]byte{0}); err == nil {
+		t.Errorf("autoFlushCountFailedFlush expected error for flush without logFile, got nil")
+	}
+}
+
+func Test_binaryLogger_LogFailedRotateFlush(t *testing.T) {
+	binlog := binaryLogger{
+		buf:            new(bytes.Buffer),
+		encodeBuf:      make([]byte, 3),
+		logFileMaxSize: 1,
+	}
+
+	t.Cleanup(binlog.Shutdown)
+
+	_, err := binlog.Log([]byte{0})
+
+	if err == nil {
+		t.Errorf("LogFailedRotateFlush expected error for flush without logFile, got nil")
+	}
 }
 
 func Test_binaryLogger_autoFlushCountSetterGetter(t *testing.T) {
