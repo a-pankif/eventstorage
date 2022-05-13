@@ -96,8 +96,6 @@ func (b *binaryLogger) Log(data []byte) (writtenLen int64, err error) {
 }
 
 func (b *binaryLogger) flush() (count int, err error) {
-	// todo - err for check nil log file
-
 	if b.insertsCount > 0 {
 		if _, err := b.logFile.Write(b.buf.Bytes()); err != nil {
 			return 0, errors.New("flush failed: " + err.Error())
