@@ -67,6 +67,7 @@ func (b *binaryLogger) insertData(data []byte) int64 {
 }
 
 func (b *binaryLogger) Log(data []byte) (writtenLen int64, err error) {
+	// todo add test for check correct written data format
 	b.locker.Lock()
 	defer b.locker.Unlock()
 
