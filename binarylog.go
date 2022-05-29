@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -51,11 +52,11 @@ func (b *binaryLogger) insertData(data []byte) int64 {
 		b.lastLineBytesCount++
 
 		if b.lastLineBytesCount >= 16 {
-			b.encodeBuf[2] = '\n'
+			b.encodeBuf[2] = LineBreak
 			b.lastLineBytesCount = 0
 			l++
 		} else if b.lastLineBytesCount%2 == 0 {
-			b.encodeBuf[2] = ' '
+			b.encodeBuf[2] = Space
 			l++
 		}
 
@@ -168,6 +169,53 @@ func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
 	}
 
 	return nil
+}
+
+func (b *binaryLogger) ReadEvents(count int64, offset int64) {
+	var seekOffset int64 = 0
+	events := make([][]byte, 0, count)
+	readBuffer := make([]byte, lineLength)
+
+	for number := 1; number <= b.logFilesCount; number++ {
+		file, _ := b.OpenForRead(number)
+		emptyBytesCount := 0
+		event := new(bytes.Buffer)
+
+		for {
+			_, _ = file.Seek(seekOffset, 0)
+			readCount, err := file.Read(readBuffer)
+
+			if err == io.EOF {
+				seekOffset = 0
+				_ = file.Close()
+				break
+			}
+
+			fmt.Println(readBuffer, LineBreak, EmptyByte, string(EmptyByte))
+			for i := 0; i < readCount; i++ {
+				v := readBuffer[i]
+				if v == 48 {
+					emptyBytesCount++
+				} else if v != Space && v != LineBreak {
+					emptyBytesCount = 0
+				}
+
+				fmt.Println(v, emptyBytesCount)
+				if v != Space && v != LineBreak && v != 48 {
+					event.WriteByte(v)
+				}
+			}
+
+			// fmt.Println(readCount, string(readBuffer[0:readCount]))
+			events = append(events, readBuffer[0:readCount])
+			seekOffset += lineLength
+		}
+
+		fmt.Println(string(event.Bytes()))
+	}
+
+	// fmt.Println(events)
+
 }
 
 func (b *binaryLogger) Decode(data []byte) ([]byte, error) {

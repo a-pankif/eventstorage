@@ -8,22 +8,23 @@ import (
 )
 
 func main() {
-	fmt.Println(os.TempDir())
+	// fmt.Println(os.TempDir())
 	binlog, _ := binarylog.New("./", os.Stderr)
 	binlog.SetAutoFlushCount(1)
-	binlog.SetLogFileMaxSize(binarylog.KB)
+	binlog.SetLogFileMaxSize(100 * binarylog.KB)
+
 	defer func() {
 		_ = binlog.CloseLogFile()
 	}()
 
-	// binlog.Log([]byte([]byte{0, 0, 0}))
-	binlog.Log([]byte("its binlog row "))
-	return
+	// _, _ = binlog.Log([]byte("its binlog row kek! "))
 
-	data, err := binlog.Read(0, 99, 0)
-	fmt.Println(err)
-	decoded, _ := binlog.Decode(data)
-	fmt.Println(string(decoded))
+	binlog.ReadEvents(1, 0)
+
+	// data, err := binlog.Read(0, 99, 0)
+	// fmt.Println(err)
+	// decoded, _ := binlog.Decode(data)
+	// fmt.Println(string(decoded))
 }
 
 func interest() {

@@ -25,6 +25,7 @@ const (
 var (
 	ErrAutoFlushTimeAlreadySet = errors.New("autoFlushTime already set")
 	ErrAutoFlushTimeTooLow     = errors.New("autoFlushTime too low value")
+	ErrLogFileNotExists        = errors.New("cant file log file")
 	logFileTemplate            = "binlog.%d"
 	RowDelimiter               = []byte{EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte}
 )
@@ -33,7 +34,7 @@ type binaryLogger struct {
 	basePath           string
 	logFile            *os.File      // Current log file to write logs
 	logFilesRegistry   *os.File      // File with list of exists log files
-	logFilesMap        logFilesMap   // Map presentation of log files registry
+	logFilesMap        logFilesMap   // Map representation of log files registry
 	logFilesCount      int           // Count of created log files
 	logFileMaxSize     int64         // Size of log file for create a new file
 	logFileSize        int64         // Size of current log file

@@ -20,7 +20,18 @@ func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, e
 
 	filePath := b.basePath + string(os.PathSeparator) + fileName
 
-	return os.OpenFile(filePath, os.O_CREATE|os.O_APPEND, 0644)
+	return os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+}
+
+func (b *binaryLogger) OpenForRead(number int) (*os.File, error) {
+	if _, exists := b.logFilesMap[number]; !exists {
+		return nil, ErrLogFileNotExists
+	}
+
+	fileName := fmt.Sprintf(logFileTemplate, number)
+	filePath := b.basePath + string(os.PathSeparator) + fileName
+
+	return os.OpenFile(filePath, os.O_RDONLY, 0644)
 }
 
 func (b *binaryLogger) rotateLogFile() error {
