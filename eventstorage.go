@@ -33,8 +33,8 @@ func New(basePath string, errWriter io.Writer) (*eventStorage, error) {
 }
 
 func (b *eventStorage) Log(data []byte) (writtenLen int64, err error) {
-	b.locker.Lock()
-	defer b.locker.Unlock()
+	b.writeLocker.Lock()
+	defer b.writeLocker.Unlock()
 
 	b.buf.Write(data)
 	b.buf.WriteByte(LineBreak)
@@ -78,8 +78,8 @@ func (b *eventStorage) flush() (count int, err error) {
 }
 
 func (b *eventStorage) Flush() (count int, err error) {
-	b.locker.Lock()
-	defer b.locker.Unlock()
+	b.writeLocker.Lock()
+	defer b.writeLocker.Unlock()
 	return b.flush()
 }
 
@@ -114,35 +114,14 @@ func (b *eventStorage) SetAutoFlushTime(period time.Duration) error {
 	return nil
 }
 
-func (b *eventStorage) Read(offset int64, count int64, whence int) ([]byte, error) {
-	buffer := make([]byte, count)
-
-	if err := b.ReadTo(&buffer, offset, whence); err != nil {
-		return []byte{}, err
-	}
-
-	return buffer, nil
-}
-
-func (b *eventStorage) ReadTo(buffer *[]byte, offset int64, whence int) error {
-	_, err := b.eventsFile.Seek(offset, whence)
-
-	if err != nil {
-		return err
-	}
-
-	if _, err = b.eventsFile.Read(*buffer); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (b *eventStorage) ReadEvents(count int, offset int) []string {
+	b.readLocker.Lock()
+	defer b.readLocker.Unlock()
+
 	var seekOffset int64 = 0
 	buf := new(strings.Builder)
 	events := make([]string, 0, count)
-	readBuffer := make([]byte, 100)
+	readBuffer := make([]byte, readEventsOpLimit)
 	eventsSaved := 0
 	eventsCount := 0
 
@@ -176,7 +155,7 @@ func (b *eventStorage) ReadEvents(count int, offset int) []string {
 				}
 			}
 
-			seekOffset += 100
+			seekOffset += readEventsOpLimit
 		}
 	}
 

@@ -20,20 +20,9 @@ func main() {
 	//
 	// fmt.Println(written)
 
-	events := eventStorage.ReadEvents(15, 1)
-	//
-	// for _, event := range events {
-	// 	fmt.Println((event))
-	// }
-	// for _, event := range events {
-	// 	fmt.Println(event)
-	// }
+	events := eventStorage.ReadEvents(11, 0)
 	for _, event := range events {
 		fmt.Println(string(event))
 	}
 
-	// data, err := eventStorage.Read(0, 99, 0)
-	// fmt.Println(err)
-	// decoded, _ := eventStorage.Decode(data)
-	// fmt.Println(string(decoded))
 }

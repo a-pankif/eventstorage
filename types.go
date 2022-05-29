@@ -15,8 +15,9 @@ const (
 )
 
 const (
-	KB int64 = 1 << 10
-	MB int64 = 1 << 20
+	KB                int64 = 1 << 10
+	MB                int64 = 1 << 20
+	readEventsOpLimit       = 1
 )
 
 var (
@@ -36,7 +37,8 @@ type eventStorage struct {
 	filesCount          int           // Count of created events files
 	fileMaxSize         int64         // Size of events file for create a new file
 	buf                 *bytes.Buffer // For collect data before flush it to file.
-	locker              sync.Mutex    // Common variables lock to avoid race condition.
+	writeLocker         sync.Mutex    // Write common variables lock to avoid race condition.
+	readLocker          sync.Mutex    // Read common variables lock to avoid race condition.
 	insertsCount        int           // Count of written events, from last data flush
 	autoFlushCount      int           // Auto flush after N count of events insert, 0 - disable.
 	autoFlushTime       time.Duration // Auto flush every N seconds, 0 - disable.

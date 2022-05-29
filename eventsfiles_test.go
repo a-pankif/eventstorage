@@ -60,7 +60,7 @@ func Test_binaryLogger_appendInRegistryFile(t *testing.T) {
 	b.eventsFilesMap = make(logFilesMap)
 	_ = b.initRegistryFile()
 
-	expectedMap := logFilesMap{1: "binlog.1", 2: "binlog.2"}
+	expectedMap := logFilesMap{1: "events.1", 2: "events.2"}
 	isEqual := reflect.DeepEqual(b.eventsFilesMap, expectedMap)
 
 	if !isEqual {
@@ -146,7 +146,7 @@ func Test_binaryLogger_rotateLogFile(t *testing.T) {
 		return
 	}
 
-	expectedMap := logFilesMap{1: "binlog.1", 2: "binlog.2"}
+	expectedMap := logFilesMap{1: "events.1", 2: "events.2"}
 	isEqual := reflect.DeepEqual(b.eventsFilesMap, expectedMap)
 
 	if !isEqual {

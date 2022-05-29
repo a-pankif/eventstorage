@@ -47,7 +47,7 @@ func Test_binaryLogger_LogCheckRotate(t *testing.T) {
 		t.Errorf("LogCheckRotate expect flush before log rotate")
 	}
 
-	expectedMap := logFilesMap{1: "binlog.1", 2: "binlog.2"}
+	expectedMap := logFilesMap{1: "events.1", 2: "events.2"}
 	isEqual := reflect.DeepEqual(binlog.eventsFilesMap, expectedMap)
 
 	if !isEqual {
@@ -166,35 +166,6 @@ func Test_binaryLogger_SetAutoFlushTime(t *testing.T) {
 	// }
 }
 
-func Test_binaryLogger_ReadToSeekFailed(t *testing.T) {
-	binlog, _ := New(t.TempDir(), os.Stderr)
-	t.Cleanup(binlog.Shutdown)
-	buf := make([]byte, 0)
-
-	if err := binlog.ReadTo(&buf, -5, 0); err == nil {
-		t.Errorf("ReadToSeekFailed expected error, got nil")
-	}
-}
-
-func Test_binaryLogger_ReadFailed(t *testing.T) {
-	binlog, _ := New(t.TempDir(), os.Stderr)
-	t.Cleanup(binlog.Shutdown)
-
-	if _, err := binlog.Read(0, 10, 0); err == nil {
-		t.Errorf("ReadToFailed expected error, got nil")
-	}
-}
-
-func Test_binaryLogger_ReadToFailed(t *testing.T) {
-	binlog, _ := New(t.TempDir(), os.Stderr)
-	t.Cleanup(binlog.Shutdown)
-	buf := make([]byte, 10)
-
-	if err := binlog.ReadTo(&buf, 0, 0); err == nil {
-		t.Errorf("ReadToFailed expected error, got nil")
-	}
-}
-
 func BenchmarkEventStorage_ReadEvents(b *testing.B) {
 	storage, _ := New(b.TempDir(), os.Stderr)
 	benchmarksFillBinlog(storage, b)
@@ -219,25 +190,6 @@ func BenchmarkLog(b *testing.B) {
 
 	b.StopTimer()
 	_, _ = binlog.Flush()
-}
-
-func BenchmarkReadTo(b *testing.B) {
-	buffer := make([]byte, 1000000)
-	binlog := benchmarksInitBinlog(b)
-	benchmarksFillBinlog(binlog, b)
-
-	for i := 0; i < b.N; i++ {
-		_ = binlog.ReadTo(&buffer, 0, 0)
-	}
-}
-
-func BenchmarkRead(b *testing.B) {
-	binlog := benchmarksInitBinlog(b)
-	benchmarksFillBinlog(binlog, b)
-
-	for i := 0; i < b.N; i++ {
-		_, _ = binlog.Read(0, 1000000, 0)
-	}
 }
 
 func benchmarksFillBinlog(binlog *eventStorage, b *testing.B) {
