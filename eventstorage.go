@@ -2,16 +2,14 @@ package binarylog
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 )
 
-func New(basePath string, errWriter io.Writer) (*binaryLogger, error) {
-	b := &binaryLogger{
+func New(basePath string, errWriter io.Writer) (*eventStorage, error) {
+	b := &eventStorage{
 		basePath:       basePath,
 		buf:            new(bytes.Buffer),
 		encodeBuf:      make([]byte, 3),
@@ -31,49 +29,18 @@ func New(basePath string, errWriter io.Writer) (*binaryLogger, error) {
 
 	b.logFileSize = b.calculateLogFileSize()
 
-	lastLine := b.logFileSize / lineLength
-	lineBuffer := make([]byte, lineLength)
-	_, _ = b.logFile.ReadAt(lineBuffer, lastLine*lineLength)
-
-	rawLine := strings.NewReplacer(" ", "", "\n", "").Replace(string(lineBuffer))
-	res, _ := hex.DecodeString(rawLine)
-	b.lastLineBytesCount = len(res)
-
 	return b, nil
 }
 
-func (b *binaryLogger) insertData(data []byte) int64 {
-	var dataLen int64 = 0
-
-	for i := range data {
-		var l int64 = 2
-
-		hex.Encode(b.encodeBuf, data[i:i+1])
-		b.lastLineBytesCount++
-
-		if b.lastLineBytesCount >= 16 {
-			b.encodeBuf[2] = LineBreak
-			b.lastLineBytesCount = 0
-			l++
-		} else if b.lastLineBytesCount%2 == 0 {
-			b.encodeBuf[2] = Space
-			l++
-		}
-
-		dataLen += l
-		b.buf.Write(b.encodeBuf[:l])
-	}
-
-	return dataLen
-}
-
-func (b *binaryLogger) Log(data []byte) (writtenLen int64, err error) {
-	// todo add test for check correct written data format
+func (b *eventStorage) Log(data []byte) (writtenLen int64, err error) {
 	b.locker.Lock()
 	defer b.locker.Unlock()
 
-	writtenLen = b.insertData(data)
-	writtenLen += b.insertData(RowDelimiter)
+	b.buf.Write(data)
+	b.buf.WriteByte(LineBreak)
+
+	writtenLen += int64(len(data) + 1)
+
 	b.logFileSize += writtenLen
 	b.insertsCount++
 
@@ -96,7 +63,7 @@ func (b *binaryLogger) Log(data []byte) (writtenLen int64, err error) {
 	return
 }
 
-func (b *binaryLogger) flush() (count int, err error) {
+func (b *eventStorage) flush() (count int, err error) {
 	if b.insertsCount > 0 {
 		if _, err := b.logFile.Write(b.buf.Bytes()); err != nil {
 			return 0, errors.New("flush failed: " + err.Error())
@@ -110,21 +77,21 @@ func (b *binaryLogger) flush() (count int, err error) {
 	return
 }
 
-func (b *binaryLogger) Flush() (count int, err error) {
+func (b *eventStorage) Flush() (count int, err error) {
 	b.locker.Lock()
 	defer b.locker.Unlock()
 	return b.flush()
 }
 
-func (b *binaryLogger) SetAutoFlushCount(count int) {
+func (b *eventStorage) SetAutoFlushCount(count int) {
 	b.autoFlushCount = count
 }
 
-func (b *binaryLogger) GetAutoFlushCount() int {
+func (b *eventStorage) GetAutoFlushCount() int {
 	return b.autoFlushCount
 }
 
-func (b *binaryLogger) SetAutoFlushTime(period time.Duration) error {
+func (b *eventStorage) SetAutoFlushTime(period time.Duration) error {
 	if b.autoFlushTime != 0 {
 		return ErrAutoFlushTimeAlreadySet
 	}
@@ -147,7 +114,7 @@ func (b *binaryLogger) SetAutoFlushTime(period time.Duration) error {
 	return nil
 }
 
-func (b *binaryLogger) Read(offset int64, count int64, whence int) ([]byte, error) {
+func (b *eventStorage) Read(offset int64, count int64, whence int) ([]byte, error) {
 	buffer := make([]byte, count)
 
 	if err := b.ReadTo(&buffer, offset, whence); err != nil {
@@ -157,7 +124,7 @@ func (b *binaryLogger) Read(offset int64, count int64, whence int) ([]byte, erro
 	return buffer, nil
 }
 
-func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
+func (b *eventStorage) ReadTo(buffer *[]byte, offset int64, whence int) error {
 	_, err := b.logFile.Seek(offset, whence)
 
 	if err != nil {
@@ -171,7 +138,7 @@ func (b *binaryLogger) ReadTo(buffer *[]byte, offset int64, whence int) error {
 	return nil
 }
 
-func (b *binaryLogger) ReadEvents(count int64, offset int64) {
+func (b *eventStorage) ReadEvents(count int64, offset int64) {
 	var seekOffset int64 = 0
 	events := make([][]byte, 0, count)
 	readBuffer := make([]byte, lineLength)
@@ -216,22 +183,4 @@ func (b *binaryLogger) ReadEvents(count int64, offset int64) {
 
 	// fmt.Println(events)
 
-}
-
-func (b *binaryLogger) Decode(data []byte) ([]byte, error) {
-	pure := make([]byte, 0, len(data))
-
-	for _, v := range data {
-		if v != Space && v != LineBreak && v != EmptyByte {
-			pure = append(pure, v)
-		}
-	}
-
-	dist := make([]byte, hex.DecodedLen(len(pure)))
-
-	if _, err := hex.Decode(dist, pure); err != nil {
-		return dist, err
-	}
-
-	return dist, nil
 }

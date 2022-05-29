@@ -9,7 +9,7 @@ import (
 )
 
 func Test_binaryLogger_initRegistryFile(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    t.TempDir(),
 		logFilesMap: make(logFilesMap),
 	}
@@ -25,7 +25,7 @@ func Test_binaryLogger_initRegistryFile(t *testing.T) {
 }
 
 func Test_binaryLogger_initRegistryFileFailed(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    string([]byte{0}),
 		logFilesMap: make(logFilesMap),
 	}
@@ -39,7 +39,7 @@ func Test_binaryLogger_initRegistryFileFailed(t *testing.T) {
 }
 
 func Test_binaryLogger_appendInRegistryFile(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    t.TempDir(),
 		logFilesMap: make(logFilesMap),
 		errWriter:   os.Stderr,
@@ -73,7 +73,7 @@ func Test_binaryLogger_appendInRegistryFile(t *testing.T) {
 }
 
 func Test_binaryLogger_initLogFileWithoutRegistry(t *testing.T) {
-	b := &binaryLogger{}
+	b := &eventStorage{}
 
 	if err := b.initLogFile(); err == nil {
 		t.Errorf("initLogFile expected failed without registry")
@@ -81,7 +81,7 @@ func Test_binaryLogger_initLogFileWithoutRegistry(t *testing.T) {
 }
 
 func Test_binaryLogger_initLogFile(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    t.TempDir(),
 		logFilesMap: make(logFilesMap),
 		errWriter:   os.Stderr,
@@ -100,7 +100,7 @@ func Test_binaryLogger_initLogFile(t *testing.T) {
 }
 
 func Test_binaryLogger_initLogFileFailed(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    t.TempDir(),
 		logFilesMap: make(logFilesMap),
 		errWriter:   os.Stderr,
@@ -120,7 +120,7 @@ func Test_binaryLogger_initLogFileFailed(t *testing.T) {
 }
 
 func Test_binaryLogger_rotateLogFileFailedCloseOld(t *testing.T) {
-	b := &binaryLogger{}
+	b := &eventStorage{}
 
 	if err := b.rotateLogFile(); err == nil {
 		t.Errorf("rotateLogFileFailedCloseOld expect failed")
@@ -128,7 +128,7 @@ func Test_binaryLogger_rotateLogFileFailedCloseOld(t *testing.T) {
 }
 
 func Test_binaryLogger_rotateLogFile(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    t.TempDir(),
 		logFilesMap: make(logFilesMap),
 	}
@@ -155,7 +155,7 @@ func Test_binaryLogger_rotateLogFile(t *testing.T) {
 }
 
 func Test_binaryLogger_openLogFileFailedAppend(t *testing.T) {
-	b := &binaryLogger{}
+	b := &eventStorage{}
 
 	if _, err := b.openLogFile(1, true); err == nil {
 		t.Errorf("openLogFileFailedAppend expect failed")
@@ -164,7 +164,7 @@ func Test_binaryLogger_openLogFileFailedAppend(t *testing.T) {
 
 func Test_binaryLogger_logErrorString(t *testing.T) {
 	buf := new(bytes.Buffer)
-	b := &binaryLogger{
+	b := &eventStorage{
 		errWriter: buf,
 	}
 
@@ -177,7 +177,7 @@ func Test_binaryLogger_logErrorString(t *testing.T) {
 
 func Test_binaryLogger_logError(t *testing.T) {
 	buf := new(bytes.Buffer)
-	b := &binaryLogger{
+	b := &eventStorage{
 		errWriter: buf,
 	}
 
@@ -189,7 +189,7 @@ func Test_binaryLogger_logError(t *testing.T) {
 }
 
 func Test_binaryLogger_SetLogFileSize(t *testing.T) {
-	b := &binaryLogger{}
+	b := &eventStorage{}
 	b.SetLogFileMaxSize(100)
 
 	if b.logFileMaxSize != 100 {
@@ -198,7 +198,7 @@ func Test_binaryLogger_SetLogFileSize(t *testing.T) {
 }
 
 func Test_binaryLogger_calculateLogFileSize(t *testing.T) {
-	b := &binaryLogger{
+	b := &eventStorage{
 		basePath:    t.TempDir(),
 		logFilesMap: make(logFilesMap),
 	}

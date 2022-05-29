@@ -17,9 +17,9 @@ func main() {
 		_ = binlog.CloseLogFile()
 	}()
 
-	// _, _ = binlog.Log([]byte("its binlog row kek! "))
+	_, _ = binlog.Log([]byte("its binlog row kek! "))
 
-	binlog.ReadEvents(1, 0)
+	// binlog.ReadEvents(1, 0)
 
 	// data, err := binlog.Read(0, 99, 0)
 	// fmt.Println(err)

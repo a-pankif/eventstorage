@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, error) {
+func (b *eventStorage) openLogFile(number int, appendRegistry bool) (*os.File, error) {
 	fileName := fmt.Sprintf(logFileTemplate, number)
 
 	if appendRegistry {
@@ -23,7 +23,7 @@ func (b *binaryLogger) openLogFile(number int, appendRegistry bool) (*os.File, e
 	return os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 }
 
-func (b *binaryLogger) OpenForRead(number int) (*os.File, error) {
+func (b *eventStorage) OpenForRead(number int) (*os.File, error) {
 	if _, exists := b.logFilesMap[number]; !exists {
 		return nil, ErrLogFileNotExists
 	}
@@ -34,7 +34,7 @@ func (b *binaryLogger) OpenForRead(number int) (*os.File, error) {
 	return os.OpenFile(filePath, os.O_RDONLY, 0644)
 }
 
-func (b *binaryLogger) rotateLogFile() error {
+func (b *eventStorage) rotateLogFile() error {
 	b.logFilesCount++
 
 	if err := b.logFile.Close(); err != nil {
@@ -50,12 +50,11 @@ func (b *binaryLogger) rotateLogFile() error {
 
 	b.logFile = logFile
 	b.logFileSize = 0
-	b.lastLineBytesCount = 0
 
 	return nil
 }
 
-func (b *binaryLogger) initLogFile() error {
+func (b *eventStorage) initLogFile() error {
 	if b.logFilesRegistry == nil {
 		return errors.New("cant init log file without registry")
 	}
@@ -79,7 +78,7 @@ func (b *binaryLogger) initLogFile() error {
 	return nil
 }
 
-func (b *binaryLogger) initRegistryFile() error {
+func (b *eventStorage) initRegistryFile() error {
 	filePath := b.basePath + string(os.PathSeparator) + registryFileName
 	registry, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND, 0644)
 
@@ -99,32 +98,32 @@ func (b *binaryLogger) initRegistryFile() error {
 	return nil
 }
 
-func (b *binaryLogger) calculateLogFileSize() int64 {
+func (b *eventStorage) calculateLogFileSize() int64 {
 	info, _ := b.logFile.Stat()
 	return info.Size()
 }
 
-func (b *binaryLogger) getLastLogFileName() string {
+func (b *eventStorage) getLastLogFileName() string {
 	return b.logFilesMap[b.logFilesCount]
 }
 
-func (b *binaryLogger) SetLogFileMaxSize(size int64) {
+func (b *eventStorage) SetLogFileMaxSize(size int64) {
 	b.logFileMaxSize = size
 }
 
-func (b *binaryLogger) CloseLogFile() error {
+func (b *eventStorage) CloseLogFile() error {
 	return b.logFile.Close()
 }
 
-func (b *binaryLogger) Shutdown() {
+func (b *eventStorage) Shutdown() {
 	_ = b.logFile.Close()
 	_ = b.logFilesRegistry.Close()
 }
 
-func (b *binaryLogger) logErrorString(err string) {
+func (b *eventStorage) logErrorString(err string) {
 	_, _ = fmt.Fprint(b.errWriter, err, "\n")
 }
 
-func (b *binaryLogger) logError(err error) {
+func (b *eventStorage) logError(err error) {
 	_, _ = fmt.Fprint(b.errWriter, err.Error(), "\n")
 }

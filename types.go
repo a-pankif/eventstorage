@@ -27,24 +27,22 @@ var (
 	ErrAutoFlushTimeTooLow     = errors.New("autoFlushTime too low value")
 	ErrLogFileNotExists        = errors.New("cant file log file")
 	logFileTemplate            = "binlog.%d"
-	RowDelimiter               = []byte{EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte, EmptyByte}
 )
 
-type binaryLogger struct {
-	basePath           string
-	logFile            *os.File      // Current log file to write logs
-	logFilesRegistry   *os.File      // File with list of exists log files
-	logFilesMap        logFilesMap   // Map representation of log files registry
-	logFilesCount      int           // Count of created log files
-	logFileMaxSize     int64         // Size of log file for create a new file
-	logFileSize        int64         // Size of current log file
-	buf                *bytes.Buffer // For collect encoded data before flush it to file.
-	encodeBuf          []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or LineBreak.
-	locker             sync.Mutex    // Common variables lock to avoid race condition.
-	insertsCount       int           // Count of logged events, from last data flush
-	autoFlushCount     int           // Auto flush after N count of log insert, 0 - disable.
-	autoFlushTime      time.Duration // Auto flush every N seconds, 0 - disable.
-	lastLineBytesCount int           // Number of bytes in the last line: only pure bytes (not hex encoded), without spaces and line breaks.
+type eventStorage struct {
+	basePath         string
+	logFile          *os.File      // Current log file to write logs
+	logFilesRegistry *os.File      // File with list of exists log files
+	logFilesMap      logFilesMap   // Map representation of log files registry
+	logFilesCount    int           // Count of created log files
+	logFileMaxSize   int64         // Size of log file for create a new file
+	logFileSize      int64         // Size of current log file
+	buf              *bytes.Buffer // For collect encoded data before flush it to file.
+	encodeBuf        []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or LineBreak.
+	locker           sync.Mutex    // Common variables lock to avoid race condition.
+	insertsCount     int           // Count of logged events, from last data flush
+	autoFlushCount   int           // Auto flush after N count of log insert, 0 - disable.
+	autoFlushTime    time.Duration // Auto flush every N seconds, 0 - disable.
 
 	errWriter io.Writer
 }
