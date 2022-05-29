@@ -20,12 +20,12 @@ func TestNew(t *testing.T) {
 
 	binlog.Shutdown()
 
-	expectedFileSize := binlog.logFileSize
+	expectedFileSize := binlog.eventsFileSize
 
 	binlog, _ = New(path, os.Stderr)
 
-	if expectedFileSize != binlog.logFileSize {
-		t.Errorf("logFileSize check was failed")
+	if expectedFileSize != binlog.eventsFileSize {
+		t.Errorf("eventsFileSize check was failed")
 	}
 
 	t.Cleanup(binlog.Shutdown)
@@ -48,10 +48,10 @@ func Test_binaryLogger_LogCheckRotate(t *testing.T) {
 	}
 
 	expectedMap := logFilesMap{1: "binlog.1", 2: "binlog.2"}
-	isEqual := reflect.DeepEqual(binlog.logFilesMap, expectedMap)
+	isEqual := reflect.DeepEqual(binlog.eventsFilesMap, expectedMap)
 
 	if !isEqual {
-		t.Errorf("LogCheckRotate not equal expected logFilesMap (%v), got %v", expectedMap, binlog.logFilesMap)
+		t.Errorf("LogCheckRotate not equal expected eventsFilesMap (%v), got %v", expectedMap, binlog.eventsFilesMap)
 	}
 }
 
@@ -69,24 +69,22 @@ func Test_binaryLogger_autoFlushCount(t *testing.T) {
 
 func Test_binaryLogger_autoFlushCountFailedFlush(t *testing.T) {
 	binlog := eventStorage{
-		buf:            new(bytes.Buffer),
-		encodeBuf:      make([]byte, 3),
-		logFileMaxSize: MB,
+		buf:         new(bytes.Buffer),
+		fileMaxSize: MB,
 	}
 
 	binlog.SetAutoFlushCount(1)
 	t.Cleanup(binlog.Shutdown)
 
 	if _, err := binlog.Log([]byte{0}); err == nil {
-		t.Errorf("autoFlushCountFailedFlush expected error for flush without logFile, got nil")
+		t.Errorf("autoFlushCountFailedFlush expected error for flush without eventsFile, got nil")
 	}
 }
 
 func Test_binaryLogger_LogFailedRotateFlush(t *testing.T) {
 	binlog := eventStorage{
-		buf:            new(bytes.Buffer),
-		encodeBuf:      make([]byte, 3),
-		logFileMaxSize: 1,
+		buf:         new(bytes.Buffer),
+		fileMaxSize: 1,
 	}
 
 	t.Cleanup(binlog.Shutdown)
@@ -94,7 +92,7 @@ func Test_binaryLogger_LogFailedRotateFlush(t *testing.T) {
 	_, err := binlog.Log([]byte{0})
 
 	if err == nil {
-		t.Errorf("LogFailedRotateFlush expected error for flush without logFile, got nil")
+		t.Errorf("LogFailedRotateFlush expected error for flush without eventsFile, got nil")
 	}
 }
 
@@ -126,8 +124,8 @@ func Test_binaryLogger_SetAutoFlushFailed(t *testing.T) {
 		return
 	}
 
-	_ = binlog.logFile.Close()
-	binlog.logFile = nil
+	_ = binlog.eventsFile.Close()
+	binlog.eventsFile = nil
 	_, _ = binlog.Log([]byte{0})
 	time.Sleep(time.Millisecond * 100)
 
@@ -197,6 +195,18 @@ func Test_binaryLogger_ReadToFailed(t *testing.T) {
 	}
 }
 
+func BenchmarkEventStorage_ReadEvents(b *testing.B) {
+	storage, _ := New(b.TempDir(), os.Stderr)
+	benchmarksFillBinlog(storage, b)
+
+	b.Cleanup(storage.Shutdown)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		storage.ReadEvents(1, 0)
+	}
+}
+
 func BenchmarkLog(b *testing.B) {
 	binlog := benchmarksInitBinlog(b)
 	raw := []byte("asdf asdf asdf asdf asdf")
@@ -233,7 +243,7 @@ func BenchmarkRead(b *testing.B) {
 func benchmarksFillBinlog(binlog *eventStorage, b *testing.B) {
 	raw := []byte("some data for tests ")
 
-	for i := 0; i < 10000; i++ { // ~2 MB of data
+	for i := 0; i < 100000; i++ { // ~20 MB of data
 		_, _ = binlog.Log(raw)
 	}
 

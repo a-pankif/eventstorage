@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/pankif/binarylog"
 	"os"
@@ -9,27 +8,32 @@ import (
 
 func main() {
 	// fmt.Println(os.TempDir())
-	binlog, _ := binarylog.New("./", os.Stderr)
-	binlog.SetAutoFlushCount(1)
-	binlog.SetLogFileMaxSize(100 * binarylog.KB)
+	eventStorage, _ := binarylog.New("./", os.Stderr)
+	eventStorage.SetAutoFlushCount(1)
+	eventStorage.SetLogFileMaxSize(100 * binarylog.KB)
 
 	defer func() {
-		_ = binlog.CloseLogFile()
+		eventStorage.Shutdown()
 	}()
 
-	_, _ = binlog.Log([]byte("its binlog row kek! "))
+	// written, _ := eventStorage.Log([]byte("its eventStorage row kek! "))
+	//
+	// fmt.Println(written)
 
-	// binlog.ReadEvents(1, 0)
+	events := eventStorage.ReadEvents(15, 1)
+	//
+	// for _, event := range events {
+	// 	fmt.Println((event))
+	// }
+	// for _, event := range events {
+	// 	fmt.Println(event)
+	// }
+	for _, event := range events {
+		fmt.Println(string(event))
+	}
 
-	// data, err := binlog.Read(0, 99, 0)
+	// data, err := eventStorage.Read(0, 99, 0)
 	// fmt.Println(err)
-	// decoded, _ := binlog.Decode(data)
+	// decoded, _ := eventStorage.Decode(data)
 	// fmt.Println(string(decoded))
-}
-
-func interest() {
-	g, _ := hex.DecodeString("1") // 67 in HEX is 'g' char, 6 or 7 (or some wrong symbol) decode from hex return zero length result
-	fmt.Println(string(g))
-	fmt.Println(len(g))
-	fmt.Println(len(string(g)))
 }

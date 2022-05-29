@@ -10,11 +10,8 @@ import (
 )
 
 const (
-	lineLength            = 40
-	Space            byte = ' '
 	LineBreak        byte = '\n'
-	EmptyByte        byte = 0
-	registryFileName      = "binlog.registry"
+	registryFileName      = "events_files.registry"
 )
 
 const (
@@ -25,26 +22,27 @@ const (
 var (
 	ErrAutoFlushTimeAlreadySet = errors.New("autoFlushTime already set")
 	ErrAutoFlushTimeTooLow     = errors.New("autoFlushTime too low value")
-	ErrLogFileNotExists        = errors.New("cant file log file")
-	logFileTemplate            = "binlog.%d"
+	ErrEventsFileNotExists     = errors.New("cant find events file")
+	eventsFileNameTemplate     = "events.%d"
 )
 
 type eventStorage struct {
-	basePath         string
-	logFile          *os.File      // Current log file to write logs
-	logFilesRegistry *os.File      // File with list of exists log files
-	logFilesMap      logFilesMap   // Map representation of log files registry
-	logFilesCount    int           // Count of created log files
-	logFileMaxSize   int64         // Size of log file for create a new file
-	logFileSize      int64         // Size of current log file
-	buf              *bytes.Buffer // For collect encoded data before flush it to file.
-	encodeBuf        []byte        // 2 bytes slice for HEX encoding, 1 byte for Space or LineBreak.
-	locker           sync.Mutex    // Common variables lock to avoid race condition.
-	insertsCount     int           // Count of logged events, from last data flush
-	autoFlushCount   int           // Auto flush after N count of log insert, 0 - disable.
-	autoFlushTime    time.Duration // Auto flush every N seconds, 0 - disable.
+	basePath            string
+	eventsFile          *os.File    // Current file to write events
+	eventsFileSize      int64       // Size of current events file
+	eventsFilesRegistry *os.File    // File with list of exists events files
+	eventsFilesMap      logFilesMap // Map representation of events files registry
+	eventsFilesReadMap  eventsFileRead
+	filesCount          int           // Count of created events files
+	fileMaxSize         int64         // Size of events file for create a new file
+	buf                 *bytes.Buffer // For collect data before flush it to file.
+	locker              sync.Mutex    // Common variables lock to avoid race condition.
+	insertsCount        int           // Count of written events, from last data flush
+	autoFlushCount      int           // Auto flush after N count of events insert, 0 - disable.
+	autoFlushTime       time.Duration // Auto flush every N seconds, 0 - disable.
 
 	errWriter io.Writer
 }
 
 type logFilesMap map[int]string
+type eventsFileRead map[int]*os.File
