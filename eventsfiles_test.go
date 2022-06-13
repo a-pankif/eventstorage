@@ -9,19 +9,23 @@ import (
 func Test_eventStorage_initRegistryFile(t *testing.T) {
 	b := &eventStorage{
 		basePath: t.TempDir(),
+		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
+		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
+
+	t.Cleanup(b.Shutdown)
 
 	if err := b.initRegistryFile(); err != nil {
 		t.Errorf("filesRegistry not inited")
 		return
 	}
-
-	t.Cleanup(b.Shutdown)
 }
 
 func Test_eventStorage_initRegistryFileFailed(t *testing.T) {
 	b := &eventStorage{
 		basePath: string([]byte{0}),
+		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
+		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
 	t.Cleanup(b.Shutdown)
 
@@ -60,7 +64,10 @@ func Test_eventStorage_appendInRegistryFile(t *testing.T) {
 }
 
 func Test_eventStorage_initLogFileWithoutRegistry(t *testing.T) {
-	b := &eventStorage{}
+	b := &eventStorage{
+		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
+		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
+	}
 
 	if err := b.initEventsFile(); err == nil {
 		t.Errorf("initEventsFile expected failed without registry")
@@ -142,7 +149,10 @@ func Test_eventStorage_rotateLogFile(t *testing.T) {
 }
 
 func Test_eventStorage_openLogFileFailedAppend(t *testing.T) {
-	b := &eventStorage{}
+	b := &eventStorage{
+		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
+		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
+	}
 	t.Cleanup(b.Shutdown)
 
 	if _, err := b.openEventsFile(1, true); err == nil {

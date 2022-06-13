@@ -1,7 +1,7 @@
 ## Install
 
 ```
-go get -u github.com/pankif/binarylog
+go get -u github.com/pankif/eventstorage
 ```
 
 ## Tests coverage

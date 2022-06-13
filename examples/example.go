@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/pankif/binarylog"
-	"os"
 	"strconv"
 	"time"
 )
@@ -12,7 +11,7 @@ func main() {
 	// ctx := context.Background()
 	// ctx, cancel := context.WithCancel(ctx)
 
-	eventStorage, _ := eventstorage.New("./", os.Stderr)
+	eventStorage, _ := eventstorage.New("./")
 	eventStorage.SetAutoFlushTime(time.Second)
 	defer eventStorage.Shutdown()
 
