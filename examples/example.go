@@ -4,25 +4,88 @@ import (
 	"fmt"
 	"github.com/pankif/binarylog"
 	"os"
+	"strconv"
+	"time"
 )
 
 func main() {
-	// fmt.Println(os.TempDir())
-	eventStorage, _ := binarylog.New("./", os.Stderr)
-	eventStorage.SetAutoFlushCount(1)
-	eventStorage.SetLogFileMaxSize(100 * binarylog.KB)
+	// ctx := context.Background()
+	// ctx, cancel := context.WithCancel(ctx)
 
-	defer func() {
-		eventStorage.Shutdown()
-	}()
+	eventStorage, _ := eventstorage.New("./", os.Stderr)
+	eventStorage.SetAutoFlushTime(time.Second)
+	defer eventStorage.Shutdown()
 
 	// written, _ := eventStorage.Log([]byte("its eventStorage row kek! "))
-	//
 	// fmt.Println(written)
 
-	events := eventStorage.ReadEvents(11, 0)
+	// fmt.Println(eventStorage.ReadEvents(5, 0))
+	return
+
+	// go func() {
+	// 	reader := 0
+	// 	for {
+	// 		evs := eventStorage.ReadEvents(1, reader)
+	// 		fmt.Println(evs)
+	// 		reader++
+	// 		time.Sleep(5 * time.Microsecond)
+	// 	}
+	// }()
+
+	go func() {
+		writer := 0
+		for {
+			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
+			writer++
+			fmt.Println(writer)
+			// time.Sleep(time.Microsecond)
+		}
+	}()
+	go func() {
+		writer := 0
+		for {
+			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
+			writer++
+			fmt.Println(writer)
+			// time.Sleep(time.Microsecond)
+		}
+	}()
+	go func() {
+		writer := 0
+		for {
+			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
+			writer++
+			fmt.Println(writer)
+			// time.Sleep(time.Microsecond)
+		}
+	}()
+	go func() {
+		writer := 0
+		for {
+			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
+			writer++
+			fmt.Println(writer)
+			// time.Sleep(time.Microsecond)
+		}
+	}()
+
+	fmt.Scanln()
+	return
+	events := eventStorage.ReadEvents(1, 0)
+
 	for _, event := range events {
-		fmt.Println(string(event))
+		fmt.Println(event)
 	}
+
+	// str := string(readBuffer[0:readCount])
+	// fmt.Println(readCount, str)
+	// for {
+	// 	pos := strings.Index(str, "\n")
+	// 	fmt.Println(pos, str[0:pos])
+	// 	str = str[pos+1:]
+	// 	if len(str) == 0 {
+	// 		break
+	// 	}
+	// }
 
 }
