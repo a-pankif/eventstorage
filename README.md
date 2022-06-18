@@ -17,19 +17,19 @@ import (
 )
 
 func main()  {
-	storage, err := eventstorage.New("./")
-	defer storage.Shutdown()
+    storage, err := eventstorage.New("./")
+    defer storage.Shutdown()
 	
-	if err != nil {
-		fmt.Println(err)
-		return
+    if err != nil {
+        fmt.Println(err)
+        return
     }
+	
+    storage.SetWriteFileMaxSize(10 * eventstorage.MB)
+    storage.SetAutoFlushCount(1)
+    _ = storage.SetAutoFlushTime(60 * time.Millisecond)
 
-	storage.SetWriteFileMaxSize(10 * eventstorage.MB)
-	storage.SetAutoFlushCount(1)
-	_ = storage.SetAutoFlushTime(60 * time.Millisecond)
-
-	_, _ = storage.Write([]byte("some data to write"))
+    _, _ = storage.Write([]byte("some data to write"))
 
     fmt.Println(storage.Read(1, 0)) 
 }
@@ -49,8 +49,11 @@ github.com/pankif/eventstorage  0.162s  coverage: 95.0% of statements
 
 ```console
 cpu: Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz  
-BenchmarkWrite-16                               34041297             33.02 ns/op              86 B/op          0 allocs/op
-BenchmarkEventStorage_Read-16                     424041              2822 ns/op              72 B/op          4 allocs/op`
-BenchmarkEventStorage_ReadTo-16                   425503              2802 ns/op             139 B/op          3 allocs/op
-BenchmarkEventStorage_ReadToOffset-16                181           6690154 ns/op          560102 B/op      30003 allocs/op
+BenchmarkWrite-16                       34041297        33.02 ns/op              86 B/op          0 allocs/op
+BenchmarkEventStorage_Read-16           424041           2822 ns/op              72 B/op          4 allocs/op`
+BenchmarkEventStorage_ReadTo-16         425503           2802 ns/op             139 B/op          3 allocs/op
+BenchmarkEventStorage_ReadToOffset-16   181           6690154 ns/op          560102 B/op      30003 allocs/op
 ````
+
+`BenchmarkEventStorage_ReadToOffset-16` describe perfomance for case offset 10000. 
+Approximate throughput of 1 000 000 events per 0.5 seconds.
