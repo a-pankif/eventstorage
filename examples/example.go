@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/pankif/binarylog"
+	"github.com/pankif/eventstorage"
 	"strconv"
 	"time"
 )
