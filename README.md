@@ -11,9 +11,9 @@ More examples you can find into [examples](https://github.com/pankif/eventstorag
 package main
 
 import (
-	"fmt"
-	"time"
-	"github.com/pankif/eventstorage"
+    "fmt"
+    "time"
+    "github.com/pankif/eventstorage"
 )
 
 func main()  {
@@ -55,5 +55,5 @@ BenchmarkEventStorage_ReadTo-16         425503        2802 ns/op        139 B/op
 BenchmarkEventStorage_ReadToOffset-16   181        6690154 ns/op     560102 B/op      30003 allocs/op
 ````
 
-`BenchmarkEventStorage_ReadToOffset-16` describe perfomance for case offset 10000. 
+`BenchmarkEventStorage_ReadToOffset-16` shows performance for case offset 10000. 
 Approximate throughput of 1 000 000 events per 0.5 seconds.
