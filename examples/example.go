@@ -8,83 +8,41 @@ import (
 )
 
 func main() {
-	// ctx := context.Background()
-	// ctx, cancel := context.WithCancel(ctx)
+	storage, err := eventstorage.New("./")
 
-	eventStorage, _ := eventstorage.New("./")
-	eventStorage.SetAutoFlushTime(time.Second)
-	defer eventStorage.Shutdown()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	// written, _ := eventStorage.Log([]byte("its eventStorage row kek! "))
-	// fmt.Println(written)
+	defer storage.Shutdown()
+	storage.SetAutoFlushCount(1)
+	_, err = storage.Write([]byte("some event to write " + strconv.Itoa(int(time.Now().UnixMilli()))))
 
-	// fmt.Println(eventStorage.ReadEvents(5, 0))
-	return
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	// go func() {
-	// 	reader := 0
-	// 	for {
-	// 		evs := eventStorage.ReadEvents(1, reader)
-	// 		fmt.Println(evs)
-	// 		reader++
-	// 		time.Sleep(5 * time.Microsecond)
-	// 	}
-	// }()
+	fmt.Println(storage.Read(1, 0))
+}
 
-	go func() {
-		writer := 0
-		for {
-			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
-			writer++
-			fmt.Println(writer)
-			// time.Sleep(time.Microsecond)
-		}
-	}()
-	go func() {
-		writer := 0
-		for {
-			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
-			writer++
-			fmt.Println(writer)
-			// time.Sleep(time.Microsecond)
-		}
-	}()
-	go func() {
-		writer := 0
-		for {
-			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
-			writer++
-			fmt.Println(writer)
-			// time.Sleep(time.Microsecond)
-		}
-	}()
-	go func() {
-		writer := 0
-		for {
-			_, _ = eventStorage.Log([]byte("its eventStorage row kek! " + strconv.Itoa(writer)))
-			writer++
-			fmt.Println(writer)
-			// time.Sleep(time.Microsecond)
-		}
-	}()
+func fillManyFilesAndRead() {
+	storage, _ := eventstorage.New("./")
+	defer storage.Shutdown()
 
-	fmt.Scanln()
-	return
-	events := eventStorage.ReadEvents(1, 0)
+	storage.SetWriteFileMaxSize(10 * eventstorage.MB)
+	_ = storage.SetAutoFlushTime(60 * time.Millisecond)
 
+	for i := 0; i < 1100000; i++ {
+		_, _ = storage.Write([]byte("event #" + strconv.Itoa(i)))
+		fmt.Println(i)
+	}
+
+	time.Sleep(time.Second)
+
+	events := storage.Read(10, 1000001)
 	for _, event := range events {
 		fmt.Println(event)
 	}
-
-	// str := string(readBuffer[0:readCount])
-	// fmt.Println(readCount, str)
-	// for {
-	// 	pos := strings.Index(str, "\n")
-	// 	fmt.Println(pos, str[0:pos])
-	// 	str = str[pos+1:]
-	// 	if len(str) == 0 {
-	// 		break
-	// 	}
-	// }
-
 }

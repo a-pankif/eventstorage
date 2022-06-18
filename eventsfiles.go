@@ -7,12 +7,12 @@ import (
 	"os"
 )
 
-func (b *eventStorage) openEventsFile(number int, appendRegistry bool) (*os.File, error) {
-	fileName := b.getFileName(number)
-	filePath := b.getFilePath(number)
+func (s *eventStorage) openEventsFile(number int, appendRegistry bool) (*os.File, error) {
+	fileName := s.getFileName(number)
+	filePath := s.getFilePath(fileName)
 
 	if appendRegistry {
-		if _, err := b.filesRegistry.WriteString(fileName + "\n"); err != nil {
+		if _, err := s.filesRegistry.WriteString(fileName + "\n"); err != nil {
 			return nil, errors.New("failed to append in registry file: " + err.Error())
 		}
 	}
@@ -23,7 +23,7 @@ func (b *eventStorage) openEventsFile(number int, appendRegistry bool) (*os.File
 		return nil, err
 	}
 
-	if _, exists := b.read.readableFiles[number]; !exists {
+	if _, exists := s.read.readableFiles[number]; !exists {
 		readFile, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
 
 		if err != nil {
@@ -31,129 +31,119 @@ func (b *eventStorage) openEventsFile(number int, appendRegistry bool) (*os.File
 			return nil, err
 		}
 
-		b.read.readableFiles[number] = readFile
+		s.read.readableFiles[number] = readFile
 	}
 
 	return writeFile, nil
 }
 
-func (b *eventStorage) rotateEventsFile() error {
-	if err := b.write.file.Close(); err != nil {
-		return errors.New("failed close old log file: " + err.Error())
+func (s *eventStorage) rotateEventsFile() error {
+	if err := s.write.file.Close(); err != nil {
+		return errors.New("failed close old events file: " + err.Error())
 	}
 
-	b.write.file = nil
-	logFile, err := b.openEventsFile(b.filesCount()+1, true)
+	s.write.file = nil
+	file, err := s.openEventsFile(s.filesCount()+1, true)
 
 	if err != nil {
-		return errors.New("failed to init log file file: " + err.Error())
+		return errors.New("rotate failed, open events file err: " + err.Error())
 	}
 
-	b.write.file = logFile
-	b.write.fileSize = 0
+	s.write.file = file
+	s.write.fileSize = 0
 
 	return nil
 }
 
-func (b *eventStorage) initEventsFile() error {
-	if b.filesRegistry == nil {
-		return errors.New("cant init log file without registry")
+func (s *eventStorage) initEventsFile() error {
+	if s.filesRegistry == nil {
+		return errors.New("cant init events file without registry")
 	}
 
 	needAppendRegistry := false
+	number := s.filesCount()
 
-	fileName := b.getLastLogFileName()
-	number := b.filesCount()
-
-	if len(fileName) == 0 {
+	if number == 0 {
 		number++
 		needAppendRegistry = true
 	}
 
-	logFile, err := b.openEventsFile(number, needAppendRegistry)
+	file, err := s.openEventsFile(number, needAppendRegistry)
 
 	if err == nil {
-		b.write.file = logFile
+		s.write.file = file
 	} else {
-		return errors.New("Failed to init log file file: " + err.Error())
+		return errors.New("Failed to init events file: " + err.Error())
 	}
 
 	return nil
 }
 
-func (b *eventStorage) initRegistryFile() error {
-	filePath := b.basePath + string(os.PathSeparator) + registryFileName
+func (s *eventStorage) initFilesRegistry() error {
+	filePath := s.getFilePath(registryFileName)
 	registry, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND, 0644)
 
 	if err == nil {
-		b.filesRegistry = registry
+		s.filesRegistry = registry
 	} else {
-		return errors.New("Failed to init registry file: " + err.Error())
+		return errors.New("Failed to init files registry: " + err.Error())
 	}
 
-	scanner := bufio.NewScanner(b.filesRegistry)
+	scanner := bufio.NewScanner(s.filesRegistry)
 
 	for scanner.Scan() {
-		path := b.basePath + string(os.PathSeparator) + scanner.Text()
+		path := s.getFilePath(scanner.Text())
 		file, err := os.OpenFile(path, os.O_RDONLY, 0644)
 
 		if err != nil {
-			return err
+			return errors.New("Failed to open events file to read: " + err.Error())
 		}
 
-		b.read.readableFiles[b.filesCount()+1] = file
+		s.read.readableFiles[s.filesCount()+1] = file
 	}
 
 	return nil
 }
 
-func (b *eventStorage) filesCount() int {
-	return len(b.read.readableFiles)
+func (s *eventStorage) filesCount() int {
+	return len(s.read.readableFiles)
 }
 
-func (b *eventStorage) calculateLogFileSize() int64 {
-	info, _ := b.write.file.Stat()
+func (s *eventStorage) calculateWriteFileSize() int64 {
+	info, _ := s.write.file.Stat()
 	return info.Size()
 }
 
-func (b *eventStorage) getLastLogFileName() string {
-	if b.filesCount() == 0 {
-		return ""
-	}
-
-	return b.read.readableFiles[b.filesCount()].Name()
+func (s *eventStorage) SetWriteFileMaxSize(size int64) {
+	s.write.fileMaxSize = size
 }
 
-func (b *eventStorage) SetLogFileMaxSize(size int64) {
-	b.write.fileMaxSize = size
-}
-
-func (b *eventStorage) getFileName(number int) string {
+func (s *eventStorage) getFileName(number int) string {
 	return fmt.Sprintf(eventsFileNameTemplate, number)
 }
 
-func (b *eventStorage) getFilePath(number int) string {
-	return b.basePath + string(os.PathSeparator) + b.getFileName(number)
+func (s *eventStorage) getFilePath(fileName string) string {
+	return s.basePath + string(os.PathSeparator) + fileName
 }
 
-func (b *eventStorage) Shutdown() {
-	b.write.locker.Lock()
-	b.read.locker.Lock()
+func (s *eventStorage) Shutdown() {
+	s.write.locker.Lock()
+	s.read.locker.Lock()
 
 	defer func() {
-		b.write.locker.Unlock()
-		b.read.locker.Unlock()
+		s.write.locker.Unlock()
+		s.read.locker.Unlock()
 	}()
 
 	go func() {
-		b.turnedOff <- true
+		s.turnedOff <- true
 	}()
 
-	_ = b.write.file.Close()
-	_ = b.filesRegistry.Close()
+	_ = s.write.file.Close()
+	_ = s.filesRegistry.Close()
 
-	for number := 1; number <= b.filesCount(); number++ {
-		file, _ := b.read.readableFiles[number]
+	for number := 1; number <= s.filesCount(); number++ {
+		file, _ := s.read.readableFiles[number]
 		_ = file.Close()
 	}
 }

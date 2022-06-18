@@ -15,9 +15,9 @@ const (
 )
 
 const (
-	KB                int64 = 1 << 10
-	MB                int64 = 1 << 20
-	readEventsOpLimit       = 100
+	KB           int64 = 1 << 10
+	MB           int64 = 1 << 20
+	readBufLimit       = 100
 )
 
 var (
@@ -43,12 +43,12 @@ type write struct {
 	insertsCount   int           // Count of written events, from last data flush
 	autoFlushCount int           // Auto flush after N count of events insert, 0 - disable.
 	autoFlushTime  time.Duration // Auto flush every N seconds, 0 - disable.
-
 }
 
 type read struct {
 	locker        sync.Mutex       // Read common variables lock to avoid race condition.
-	buf           *strings.Builder // For collect event data before append to events slice.
+	buf           *strings.Builder // For collect one event data before append to events slice.
+	readBuf       []byte           // For read data from file.
 	seekOffset    int64            // Current file read offset.
 	eventsSaved   int              // Count of events to return.
 	eventsCount   int              // Count of read events, for check offset.

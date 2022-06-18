@@ -9,50 +9,50 @@ import (
 )
 
 func New(basePath string) (*eventStorage, error) {
-	b := &eventStorage{
+	s := &eventStorage{
 		basePath:  basePath,
 		write:     &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
-		read:      &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
+		read:      &read{readableFiles: make(readableFiles), buf: new(strings.Builder), readBuf: make([]byte, readBufLimit)},
 		turnedOff: make(chan bool, 1),
 	}
 
-	if err := b.initRegistryFile(); err != nil {
+	if err := s.initFilesRegistry(); err != nil {
 		return nil, err
 	}
 
-	if err := b.initEventsFile(); err != nil {
+	if err := s.initEventsFile(); err != nil {
 		return nil, err
 	}
 
-	b.write.fileSize = b.calculateLogFileSize()
+	s.write.fileSize = s.calculateWriteFileSize()
 
-	return b, nil
+	return s, nil
 }
 
-func (b *eventStorage) Log(data []byte) (writtenLen int64, err error) {
-	b.write.locker.Lock()
-	defer b.write.locker.Unlock()
+func (s *eventStorage) Write(data []byte) (writtenLen int64, err error) {
+	s.write.locker.Lock()
+	defer s.write.locker.Unlock()
 
-	b.write.buf.Write(data)
-	b.write.buf.WriteByte(LineBreak)
+	s.write.buf.Write(data)
+	s.write.buf.WriteByte(LineBreak)
 
 	writtenLen += int64(len(data) + 1)
 
-	b.write.fileSize += writtenLen
-	b.write.insertsCount++
+	s.write.fileSize += writtenLen
+	s.write.insertsCount++
 
-	if b.write.autoFlushCount > 0 && b.write.insertsCount >= b.write.autoFlushCount {
-		if _, err = b.flush(); err != nil {
+	if s.write.autoFlushCount > 0 && s.write.insertsCount >= s.write.autoFlushCount {
+		if _, err = s.flush(); err != nil {
 			return
 		}
 	}
 
-	if b.write.fileSize >= b.write.fileMaxSize {
-		if _, err = b.flush(); err != nil {
+	if s.write.fileSize >= s.write.fileMaxSize {
+		if _, err = s.flush(); err != nil {
 			return
 		}
 
-		if err = b.rotateEventsFile(); err != nil {
+		if err = s.rotateEventsFile(); err != nil {
 			return
 		}
 	}
@@ -60,105 +60,105 @@ func (b *eventStorage) Log(data []byte) (writtenLen int64, err error) {
 	return
 }
 
-func (b *eventStorage) flush() (count int, err error) {
-	if b.write.insertsCount > 0 {
-		if _, err := b.write.file.Write(b.write.buf.Bytes()); err != nil {
+func (s *eventStorage) flush() (count int, err error) {
+	if s.write.insertsCount > 0 {
+		if _, err = s.write.file.Write(s.write.buf.Bytes()); err != nil {
 			return 0, errors.New("flush failed: " + err.Error())
 		} else {
-			b.write.buf.Truncate(0)
-			count = b.write.insertsCount
-			b.write.insertsCount = 0
+			s.write.buf.Truncate(0)
+			count = s.write.insertsCount
+			s.write.insertsCount = 0
 		}
 	}
 
 	return
 }
 
-func (b *eventStorage) Flush() (count int, err error) {
-	b.write.locker.Lock()
-	defer b.write.locker.Unlock()
-	return b.flush()
+func (s *eventStorage) Flush() (count int, err error) {
+	s.write.locker.Lock()
+	defer s.write.locker.Unlock()
+	return s.flush()
 }
 
-func (b *eventStorage) setAutoFlushCount(count int) {
-	b.write.autoFlushCount = count
+func (s *eventStorage) SetAutoFlushCount(count int) {
+	s.write.autoFlushCount = count
 }
 
-func (b *eventStorage) GetAutoFlushCount() int {
-	return b.write.autoFlushCount
+func (s *eventStorage) GetAutoFlushCount() int {
+	return s.write.autoFlushCount
 }
 
-func (b *eventStorage) SetAutoFlushTime(period time.Duration) error {
+func (s *eventStorage) SetAutoFlushTime(period time.Duration) error {
 	if period <= 0 {
 		return ErrAutoFlushTimeTooLow
 	}
 
-	if b.write.autoFlushTime != 0 {
-		return ErrAutoFlushTimeAlreadySet // todo - supports cancel curren gorutine by channel and set up new
+	if s.write.autoFlushTime != 0 {
+		return ErrAutoFlushTimeAlreadySet
 	}
 
-	b.write.autoFlushTime = period
+	s.write.autoFlushTime = period
 
 	go func() {
 		for range time.Tick(period) {
 			select {
-			case <-b.turnedOff:
+			case <-s.turnedOff:
 				return
 			default:
 			}
 
-			_, _ = b.Flush()
+			_, _ = s.Flush()
 		}
 	}()
 
 	return nil
 }
 
-func (b *eventStorage) ReadEvents(count int, offset int) []string {
-	b.read.locker.Lock()
-	defer b.read.locker.Unlock()
+func (s *eventStorage) ReadTo(count int, offset int, events *[]string) {
+	s.read.locker.Lock()
+	defer s.read.locker.Unlock()
 
-	events := make([]string, 0, count)
-	readBuffer := make([]byte, readEventsOpLimit)
+	s.read.eventsCount = 0
+	s.read.eventsSaved = 0
+	s.read.buf.Reset()
 
-	b.read.eventsCount = 0
-	b.read.eventsSaved = 0
-	b.read.seekOffset = 0
-	b.read.buf.Reset()
-
-	for number := 1; number <= b.filesCount(); number++ {
-		file := b.read.readableFiles[number]
+	for number := 1; number <= s.filesCount(); number++ {
+		file := s.read.readableFiles[number]
+		s.read.seekOffset = 0
 
 		for {
-			_, _ = file.Seek(b.read.seekOffset, 0)
-			readCount, err := file.Read(readBuffer)
+			_, _ = file.Seek(s.read.seekOffset, 0)
+			readCount, err := file.Read(s.read.readBuf)
 
 			if err != nil && (err == io.EOF || strings.Contains(err.Error(), "file already closed")) {
-				b.read.seekOffset = 0
 				break
 			}
 
 			for i := 0; i < readCount; i++ {
-				if readBuffer[i] == LineBreak {
-					if offset <= b.read.eventsCount {
-						events = append(events, b.read.buf.String())
-						b.read.eventsSaved++
+				if s.read.readBuf[i] == LineBreak {
+					if offset <= s.read.eventsCount {
+						*events = append(*events, s.read.buf.String())
+						s.read.eventsSaved++
 					}
 
-					b.read.eventsCount++
-					b.read.buf.Reset()
+					s.read.eventsCount++
+					s.read.buf.Reset()
 
-					if b.read.eventsSaved == count {
-						return events
+					if s.read.eventsSaved == count {
+						return
 					}
 				} else {
-					b.read.buf.WriteByte(readBuffer[i])
+					s.read.buf.WriteByte(s.read.readBuf[i])
 				}
 			}
 
-			b.read.seekOffset += readEventsOpLimit
+			s.read.seekOffset += readBufLimit
 		}
 	}
+}
 
+func (s *eventStorage) Read(count int, offset int) []string {
+	events := make([]string, 0, count)
+	s.ReadTo(count, offset, &events)
 	return events
 }

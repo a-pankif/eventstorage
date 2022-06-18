@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 	storage, _ := New(path)
 
 	data := []byte{0, 0, 0}
-	_, _ = storage.Log(data)
+	_, _ = storage.Write(data)
 	_, _ = storage.Flush()
 
 	storage.Shutdown()
@@ -31,17 +31,17 @@ func TestNew(t *testing.T) {
 
 func Test_eventStorage_LogCheckRotate(t *testing.T) {
 	storage, _ := New(t.TempDir())
-	storage.SetLogFileMaxSize(1)
+	storage.SetWriteFileMaxSize(1)
 	t.Cleanup(storage.Shutdown)
 
-	_, _ = storage.Log([]byte("some data"))
-	_, _ = storage.Log([]byte("some data"))
-	_, _ = storage.Log([]byte("some data"))
-	_, _ = storage.Log([]byte("some data"))
-	_, _ = storage.Log([]byte("some data"))
-	_, _ = storage.Log([]byte("some data"))
+	_, _ = storage.Write([]byte("some data"))
+	_, _ = storage.Write([]byte("some data"))
+	_, _ = storage.Write([]byte("some data"))
+	_, _ = storage.Write([]byte("some data"))
+	_, _ = storage.Write([]byte("some data"))
+	_, _ = storage.Write([]byte("some data"))
 
-	if storage.calculateLogFileSize() != 0 {
+	if storage.calculateWriteFileSize() != 0 {
 		t.Errorf("LogCheckRotate expect create new log file, its must be empty after rotate")
 		return
 	}
@@ -67,12 +67,12 @@ func Test_eventStorage_LogCheckRotate(t *testing.T) {
 
 func Test_eventStorage_autoFlushCount(t *testing.T) {
 	storage, _ := New(t.TempDir())
-	storage.setAutoFlushCount(1)
+	storage.SetAutoFlushCount(1)
 	t.Cleanup(storage.Shutdown)
 
-	_, _ = storage.Log([]byte{0})
+	_, _ = storage.Write([]byte{0})
 
-	if storage.calculateLogFileSize() == 0 {
+	if storage.calculateWriteFileSize() == 0 {
 		t.Errorf("autoFlushCount failed, expected to flush")
 	}
 }
@@ -83,10 +83,10 @@ func Test_eventStorage_autoFlushCountFailedFlush(t *testing.T) {
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
 
-	storage.setAutoFlushCount(1)
+	storage.SetAutoFlushCount(1)
 	t.Cleanup(storage.Shutdown)
 
-	if _, err := storage.Log([]byte{0}); err == nil {
+	if _, err := storage.Write([]byte{0}); err == nil {
 		t.Errorf("autoFlushCountFailedFlush expected error for flush without file, got nil")
 	}
 }
@@ -99,7 +99,7 @@ func Test_eventStorage_LogFailedRotateFlush(t *testing.T) {
 
 	t.Cleanup(storage.Shutdown)
 
-	_, err := storage.Log([]byte{0})
+	_, err := storage.Write([]byte{0})
 
 	if err == nil {
 		t.Errorf("LogFailedRotateFlush expected error for flush without file, got nil")
@@ -111,10 +111,10 @@ func Test_eventStorage_autoFlushCountSetterGetter(t *testing.T) {
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
-	storage.setAutoFlushCount(7)
+	storage.SetAutoFlushCount(7)
 
 	if storage.GetAutoFlushCount() != 7 {
-		t.Errorf("setAutoFlushCount failed")
+		t.Errorf("SetAutoFlushCount failed")
 	}
 }
 
@@ -147,10 +147,15 @@ func Test_eventStorage_SetAutoFlushTime(t *testing.T) {
 	}
 
 	data := []byte("s")
-	_, _ = storage.Log(data)
+	_, _ = storage.Write(data)
 	time.Sleep(time.Millisecond * 100)
 
-	events := storage.ReadEvents(1, 0)
+	events := storage.Read(1, 0)
+
+	if len(events) == 0 {
+		t.Errorf("SetAutoFlushTime failed, fetched data is incorrect")
+		return
+	}
 
 	isEqual := reflect.DeepEqual(events[0], string(data))
 
@@ -159,7 +164,7 @@ func Test_eventStorage_SetAutoFlushTime(t *testing.T) {
 	}
 }
 
-func BenchmarkEventStorage_ReadEvents(b *testing.B) {
+func BenchmarkEventStorage_Read(b *testing.B) {
 	storage, _ := New(b.TempDir())
 	benchmarksFillstorage(storage, b)
 
@@ -167,7 +172,33 @@ func BenchmarkEventStorage_ReadEvents(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		storage.ReadEvents(1, 0)
+		storage.Read(1, 0)
+	}
+}
+
+func BenchmarkEventStorage_ReadTo(b *testing.B) {
+	storage, _ := New(b.TempDir())
+	readTo := make([]string, 0, 1)
+	benchmarksFillstorage(storage, b)
+
+	b.Cleanup(storage.Shutdown)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		storage.ReadTo(1, 0, &readTo)
+	}
+}
+
+func BenchmarkEventStorage_ReadToOffset(b *testing.B) {
+	storage, _ := New(b.TempDir())
+	readTo := make([]string, 0, 1)
+	benchmarksFillstorage(storage, b)
+
+	b.Cleanup(storage.Shutdown)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		storage.ReadTo(1, 10000, &readTo)
 	}
 }
 
@@ -178,7 +209,7 @@ func BenchmarkLog(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = storage.Log(raw)
+		_, _ = storage.Write(raw)
 	}
 
 	b.StopTimer()
@@ -188,8 +219,8 @@ func BenchmarkLog(b *testing.B) {
 func benchmarksFillstorage(storage *eventStorage, b *testing.B) {
 	raw := []byte("some data for tests ")
 
-	for i := 0; i < 100000; i++ { // ~20 MB of data
-		_, _ = storage.Log(raw)
+	for i := 0; i < 300000; i++ { // ~60 MB of data
+		_, _ = storage.Write(raw)
 	}
 
 	_, _ = storage.Flush()
@@ -198,7 +229,7 @@ func benchmarksFillstorage(storage *eventStorage, b *testing.B) {
 
 func benchmarksInitStorage(b *testing.B) *eventStorage {
 	storage, _ := New(b.TempDir())
-	storage.SetLogFileMaxSize(1000 * MB)
+	storage.SetWriteFileMaxSize(1000 * MB)
 	b.Cleanup(storage.Shutdown)
 
 	return storage

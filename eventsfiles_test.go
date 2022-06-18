@@ -15,7 +15,7 @@ func Test_eventStorage_initRegistryFile(t *testing.T) {
 
 	t.Cleanup(b.Shutdown)
 
-	if err := b.initRegistryFile(); err != nil {
+	if err := b.initFilesRegistry(); err != nil {
 		t.Errorf("filesRegistry not inited")
 		return
 	}
@@ -29,7 +29,7 @@ func Test_eventStorage_initRegistryFileFailed(t *testing.T) {
 	}
 	t.Cleanup(b.Shutdown)
 
-	if err := b.initRegistryFile(); err == nil {
+	if err := b.initFilesRegistry(); err == nil {
 		t.Errorf("filesRegistry inited, but expected fail")
 	}
 }
@@ -41,7 +41,7 @@ func Test_eventStorage_appendInRegistryFile(t *testing.T) {
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
 
-	_ = b.initRegistryFile()
+	_ = b.initFilesRegistry()
 
 	file1, _ := b.openEventsFile(1, true)
 	file2, _ := b.openEventsFile(2, true)
@@ -50,7 +50,7 @@ func Test_eventStorage_appendInRegistryFile(t *testing.T) {
 	_ = file2.Close()
 	_ = b.filesRegistry.Close()
 
-	_ = b.initRegistryFile()
+	_ = b.initFilesRegistry()
 
 	// expectedMap := logFilesMap{1: "events.1", 2: "events.2"}
 	// isEqual := reflect.DeepEqual(b.eventsFilesMap, expectedMap)
@@ -82,7 +82,7 @@ func Test_eventStorage_initLogFile(t *testing.T) {
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
-	_ = b.initRegistryFile()
+	_ = b.initFilesRegistry()
 
 	if err := b.initEventsFile(); err != nil {
 		t.Errorf("initEventsFile failed")
@@ -99,7 +99,7 @@ func Test_eventStorage_initLogFileFailed(t *testing.T) {
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
 
-	_ = b.initRegistryFile()
+	_ = b.initFilesRegistry()
 
 	t.Cleanup(b.Shutdown)
 
@@ -130,7 +130,7 @@ func Test_eventStorage_rotateLogFile(t *testing.T) {
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
 
-	_ = b.initRegistryFile()
+	_ = b.initFilesRegistry()
 	_ = b.initEventsFile()
 
 	t.Cleanup(b.Shutdown)
@@ -165,11 +165,11 @@ func Test_eventStorage_SetLogFileSize(t *testing.T) {
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
-	b.SetLogFileMaxSize(100)
+	b.SetWriteFileMaxSize(100)
 	t.Cleanup(b.Shutdown)
 
 	if b.write.fileMaxSize != 100 {
-		t.Errorf("SetLogFileMaxSize failed")
+		t.Errorf("SetWriteFileMaxSize failed")
 	}
 }
 
@@ -180,14 +180,14 @@ func Test_eventStorage_calculateLogFileSize(t *testing.T) {
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
 
-	_ = b.initRegistryFile()
+	_ = b.initFilesRegistry()
 	_ = b.initEventsFile()
 
 	t.Cleanup(b.Shutdown)
 
 	_, _ = b.write.file.Write([]byte{1, 2, 3})
 
-	if b.calculateLogFileSize() != 3 {
-		t.Errorf("calculateLogFileSize failed")
+	if b.calculateWriteFileSize() != 3 {
+		t.Errorf("calculateWriteFileSize failed")
 	}
 }
