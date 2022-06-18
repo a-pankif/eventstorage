@@ -40,27 +40,31 @@ func Test_eventStorage_appendInRegistryFile(t *testing.T) {
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
-
+	t.Cleanup(b.Shutdown)
 	_ = b.initFilesRegistry()
 
 	file1, _ := b.openEventsFile(1, true)
 	file2, _ := b.openEventsFile(2, true)
+	file3, _ := b.openEventsFile(3, true)
 
 	_ = file1.Close()
 	_ = file2.Close()
+	_ = file3.Close()
 	_ = b.filesRegistry.Close()
 
-	_ = b.initFilesRegistry()
+	if len(b.read.readableFiles) != 3 {
+		t.Errorf("appendInRegistryFile has wrong count")
+		return
+	}
 
-	// expectedMap := logFilesMap{1: "events.1", 2: "events.2"}
-	// isEqual := reflect.DeepEqual(b.eventsFilesMap, expectedMap)
-	//
-	// if !isEqual {
-	// 	t.Errorf("eventsFilesMap not equal expected")
-	// }
-	// todo - repair
+	for i, file := range b.read.readableFiles {
+		info, _ := file.Stat()
 
-	t.Cleanup(b.Shutdown)
+		if b.getFileName(i) != info.Name() {
+			t.Errorf("Wrong file name, expected %v, got %v", b.getFileName(i), info.Name())
+			return
+		}
+	}
 }
 
 func Test_eventStorage_initLogFileWithoutRegistry(t *testing.T) {
@@ -139,13 +143,20 @@ func Test_eventStorage_rotateLogFile(t *testing.T) {
 		t.Errorf("rotateEventsFile failed")
 		return
 	}
-	// todo - repair
-	// expectedMap := logFilesMap{1: "events.1", 2: "events.2"}
-	// isEqual := reflect.DeepEqual(b.eventsFilesMap, expectedMap)
-	//
-	// if !isEqual {
-	// 	t.Errorf("rotateEventsFile eventsFilesMap not equal expected")
-	// }
+
+	if len(b.read.readableFiles) != 2 {
+		t.Errorf("rotateLogFile has wrong count")
+		return
+	}
+
+	for i, file := range b.read.readableFiles {
+		info, _ := file.Stat()
+
+		if b.getFileName(i) != info.Name() {
+			t.Errorf("Wrong file name, expected %v, got %v", b.getFileName(i), info.Name())
+			return
+		}
+	}
 }
 
 func Test_eventStorage_openLogFileFailedAppend(t *testing.T) {

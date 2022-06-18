@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -13,8 +14,7 @@ func TestNew(t *testing.T) {
 	path := t.TempDir()
 	storage, _ := New(path)
 
-	data := []byte{0, 0, 0}
-	_, _ = storage.Write(data)
+	_, _ = storage.Write([]byte{0, 0, 0})
 	_, _ = storage.Flush()
 
 	storage.Shutdown()
@@ -29,7 +29,7 @@ func TestNew(t *testing.T) {
 	t.Cleanup(storage.Shutdown)
 }
 
-func Test_eventStorage_LogCheckRotate(t *testing.T) {
+func Test_eventStorage_WriteCheckRotate(t *testing.T) {
 	storage, _ := New(t.TempDir())
 	storage.SetWriteFileMaxSize(1)
 	t.Cleanup(storage.Shutdown)
@@ -42,17 +42,17 @@ func Test_eventStorage_LogCheckRotate(t *testing.T) {
 	_, _ = storage.Write([]byte("some data"))
 
 	if storage.calculateWriteFileSize() != 0 {
-		t.Errorf("LogCheckRotate expect create new log file, its must be empty after rotate")
+		t.Errorf("WriteCheckRotate expect create new events file, it must be empty after rotate")
 		return
 	}
 
 	if len(storage.write.buf.Bytes()) > 0 {
-		t.Errorf("LogCheckRotate expect flush before log rotate")
+		t.Errorf("WriteCheckRotate expect flush before events file rotate")
 		return
 	}
 
 	if len(storage.read.readableFiles) != 7 {
-		t.Errorf("LogCheckRotate expect 7 events files, got %v", len(storage.read.readableFiles))
+		t.Errorf("WriteCheckRotate expect 7 events files, got %v", len(storage.read.readableFiles))
 		return
 	}
 
@@ -60,7 +60,29 @@ func Test_eventStorage_LogCheckRotate(t *testing.T) {
 		info, _ := file.Stat()
 		expectedName := fmt.Sprintf(eventsFileNameTemplate, i)
 		if info.Name() != expectedName {
-			t.Errorf("LogCheckRotate not equal expected events file name (%v), got %v", expectedName, info.Name())
+			t.Errorf("WriteCheckRotate not equal expected events file name (%v), got %v", expectedName, info.Name())
+		}
+	}
+}
+
+func Test_eventStorage_Read(t *testing.T) {
+	storage, _ := New(t.TempDir())
+	storage.SetWriteFileMaxSize(20)
+	storage.SetAutoFlushCount(1)
+	t.Cleanup(storage.Shutdown)
+
+	const dataPrefix = "some data"
+	const iterCount = 30
+
+	for i := 0; i <= iterCount; i++ {
+		_, _ = storage.Write([]byte(dataPrefix + strconv.Itoa(i)))
+	}
+
+	events := storage.Read(iterCount, 0)
+	for i, event := range events {
+		if event != dataPrefix+strconv.Itoa(i) {
+			t.Errorf("Read failed, incorrect data.")
+			return
 		}
 	}
 }
@@ -91,7 +113,7 @@ func Test_eventStorage_autoFlushCountFailedFlush(t *testing.T) {
 	}
 }
 
-func Test_eventStorage_LogFailedRotateFlush(t *testing.T) {
+func Test_eventStorage_WriteFailedRotateFlush(t *testing.T) {
 	storage := eventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 1},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -102,7 +124,7 @@ func Test_eventStorage_LogFailedRotateFlush(t *testing.T) {
 	_, err := storage.Write([]byte{0})
 
 	if err == nil {
-		t.Errorf("LogFailedRotateFlush expected error for flush without file, got nil")
+		t.Errorf("WriteFailedRotateFlush expected error for flush without file, got nil")
 	}
 }
 
@@ -202,7 +224,7 @@ func BenchmarkEventStorage_ReadToOffset(b *testing.B) {
 	}
 }
 
-func BenchmarkLog(b *testing.B) {
+func BenchmarkWrite(b *testing.B) {
 	storage := benchmarksInitStorage(b)
 	raw := []byte("asdf asdf asdf asdf asdf")
 
