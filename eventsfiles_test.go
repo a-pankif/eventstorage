@@ -185,20 +185,13 @@ func Test_eventStorage_SetLogFileSize(t *testing.T) {
 }
 
 func Test_eventStorage_calculateLogFileSize(t *testing.T) {
-	b := &eventStorage{
-		basePath: t.TempDir(),
-		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
-		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
-	}
+	s, _ := New(t.TempDir())
+	s.SetAutoFlushCount(1)
+	t.Cleanup(s.Shutdown)
 
-	_ = b.initFilesRegistry()
-	_ = b.initEventsFile()
+	_, _ = s.Write([]byte{1, 2, 3})
 
-	t.Cleanup(b.Shutdown)
-
-	_, _ = b.write.file.Write([]byte{1, 2, 3})
-
-	if b.calculateWriteFileSize() != 3 {
+	if s.calculateWriteFileSize() != 4 { // 3 is data length + 1 is line break
 		t.Errorf("calculateWriteFileSize failed")
 	}
 }
