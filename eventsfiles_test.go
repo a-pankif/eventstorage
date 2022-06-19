@@ -2,6 +2,7 @@ package eventstorage
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -185,7 +186,15 @@ func Test_eventStorage_SetLogFileSize(t *testing.T) {
 }
 
 func Test_eventStorage_calculateLogFileSize(t *testing.T) {
-	s, _ := New(t.TempDir())
+	dir := t.TempDir()
+	fmt.Println(dir)
+	s, err := New(dir)
+
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
 	s.SetAutoFlushCount(1)
 	t.Cleanup(s.Shutdown)
 
