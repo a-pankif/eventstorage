@@ -81,7 +81,7 @@ func (s *eventStorage) initEventsFile() error {
 
 func (s *eventStorage) initFilesRegistry() error {
 	filePath := s.getFilePath(registryFileName)
-	registry, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND, 0644)
+	registry, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 
 	if err == nil {
 		s.filesRegistry = registry
