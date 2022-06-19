@@ -1,5 +1,10 @@
-## Install
+# Eventstorage
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/pankif/eventstorage)](https://goreportcard.com/report/github.com/pankif/eventstorage)
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/pankif/eventstorage/blob/main/LICENSE)
+
+
+## Installation
 ```
 go get -u github.com/pankif/eventstorage
 ```
