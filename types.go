@@ -17,7 +17,7 @@ const (
 const (
 	KB           int64 = 1 << 10
 	MB           int64 = 1 << 20
-	readBufLimit       = 100
+	readBufLimit       = 32 * KB
 )
 
 var (

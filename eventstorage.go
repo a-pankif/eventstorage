@@ -114,7 +114,7 @@ func (s *eventStorage) SetAutoFlushTime(period time.Duration) error {
 	return nil
 }
 
-func (s *eventStorage) ReadTo(count int, offset int, events *[]string) {
+func (s *eventStorage) ReadTo(count int, offset int, events []string) {
 	s.read.locker.Lock()
 	defer s.read.locker.Unlock()
 
@@ -136,19 +136,23 @@ func (s *eventStorage) ReadTo(count int, offset int, events *[]string) {
 
 			for i := 0; i < readCount; i++ {
 				if s.read.readBuf[i] == LineBreak {
-					if offset <= s.read.eventsCount {
-						*events = append(*events, s.read.buf.String())
-						s.read.eventsSaved++
-					}
-
 					s.read.eventsCount++
+				} else if s.read.eventsCount >= offset {
+					s.read.buf.WriteByte(s.read.readBuf[i])
+				}
+
+				if s.read.eventsCount <= offset {
+					continue
+				}
+
+				if s.read.readBuf[i] == LineBreak {
+					events[s.read.eventsSaved] = s.read.buf.String()
+					s.read.eventsSaved++
 					s.read.buf.Reset()
 
 					if s.read.eventsSaved == count {
 						return
 					}
-				} else {
-					s.read.buf.WriteByte(s.read.readBuf[i])
 				}
 			}
 
@@ -158,7 +162,7 @@ func (s *eventStorage) ReadTo(count int, offset int, events *[]string) {
 }
 
 func (s *eventStorage) Read(count int, offset int) []string {
-	events := make([]string, 0, count)
-	s.ReadTo(count, offset, &events)
+	events := make([]string, count)
+	s.ReadTo(count, offset, events)
 	return events
 }

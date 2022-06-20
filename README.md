@@ -4,6 +4,17 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/pankif/eventstorage)](https://goreportcard.com/report/github.com/pankif/eventstorage)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/pankif/eventstorage/blob/main/LICENSE)
 
+This is an event logger with high-speed recording and event reading capability. Supports log rotation.
+
+## Benchmarks
+
+```console
+cpu: Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz  
+BenchmarkWriteChar-16                        63323869       19.42 ns/op         4  B/op         0 allocs/op
+BenchmarkEventStorage_ReadChar-16              323152        3665 ns/op         24 B/op         1 allocs/op
+BenchmarkEventStorage_CharReadTo-16            331111        3637 ns/op          8 B/op         1 allocs/op
+BenchmarkEventStorage_CharReadToOffset10000-16  43273       27300 ns/op          8 B/op         1 allocs/op
+````
 
 ## Installation
 ```
@@ -42,24 +53,10 @@ func main()  {
 ```
 
 ## Tests
-- `go tests`
 - Coverage percent `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`
 - Coverage map `go test ./ -coverprofile c.out && go tool cover -html=c.out`
+- `go test -bench=. --benchmem`
 
 ```console
 github.com/pankif/eventstorage  0.162s  coverage: 95.0% of statements
 ````
-
-## Benchmarks
-`go test -bench=. --benchmem`
-
-```console
-cpu: Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz  
-BenchmarkWrite-16                       34041297     33.02 ns/op         86 B/op          0 allocs/op
-BenchmarkEventStorage_Read-16           424041        2822 ns/op         72 B/op          4 allocs/op`
-BenchmarkEventStorage_ReadTo-16         425503        2802 ns/op        139 B/op          3 allocs/op
-BenchmarkEventStorage_ReadToOffset-16   181        6690154 ns/op     560102 B/op      30003 allocs/op
-````
-
-`BenchmarkEventStorage_ReadToOffset-16` shows performance for case offset 10000. 
-Approximate throughput of 1 000 000 events per 0.5 seconds.

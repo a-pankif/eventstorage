@@ -72,15 +72,16 @@ func Test_eventStorage_Read(t *testing.T) {
 	t.Cleanup(storage.Shutdown)
 
 	const dataPrefix = "some data"
-	const iterCount = 30
+	const iterCount = 300
+	const offset = 10
 
 	for i := 0; i <= iterCount; i++ {
 		_, _ = storage.Write([]byte(dataPrefix + strconv.Itoa(i)))
 	}
 
-	events := storage.Read(iterCount, 0)
+	events := storage.Read(iterCount-offset, offset)
 	for i, event := range events {
-		if event != dataPrefix+strconv.Itoa(i) {
+		if event != dataPrefix+strconv.Itoa(offset+i) {
 			t.Errorf("Read failed, incorrect data.")
 			return
 		}
@@ -186,47 +187,9 @@ func Test_eventStorage_SetAutoFlushTime(t *testing.T) {
 	}
 }
 
-func BenchmarkEventStorage_Read(b *testing.B) {
-	storage, _ := New(b.TempDir())
-	benchmarksFillstorage(storage, b)
-
-	b.Cleanup(storage.Shutdown)
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		storage.Read(1, 0)
-	}
-}
-
-func BenchmarkEventStorage_ReadTo(b *testing.B) {
-	storage, _ := New(b.TempDir())
-	readTo := make([]string, 0, 1)
-	benchmarksFillstorage(storage, b)
-
-	b.Cleanup(storage.Shutdown)
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		storage.ReadTo(1, 0, &readTo)
-	}
-}
-
-func BenchmarkEventStorage_ReadToOffset(b *testing.B) {
-	storage, _ := New(b.TempDir())
-	readTo := make([]string, 0, 1)
-	benchmarksFillstorage(storage, b)
-
-	b.Cleanup(storage.Shutdown)
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		storage.ReadTo(1, 10000, &readTo)
-	}
-}
-
-func BenchmarkWrite(b *testing.B) {
+func BenchmarkWriteChar(b *testing.B) {
 	storage := benchmarksInitStorage(b)
-	raw := []byte("asdf asdf asdf asdf asdf")
+	raw := []byte("s")
 
 	b.ResetTimer()
 
@@ -238,10 +201,47 @@ func BenchmarkWrite(b *testing.B) {
 	_, _ = storage.Flush()
 }
 
-func benchmarksFillstorage(storage *eventStorage, b *testing.B) {
-	raw := []byte("some data for tests ")
+func BenchmarkEventStorage_ReadChar(b *testing.B) {
+	storage, _ := New(b.TempDir())
+	benchmarksFillstorage(storage, b)
 
-	for i := 0; i < 300000; i++ { // ~60 MB of data
+	b.Cleanup(storage.Shutdown)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		storage.Read(1, 0)
+	}
+}
+
+func BenchmarkEventStorage_CharReadTo(b *testing.B) {
+	storage, _ := New(b.TempDir())
+	readTo := make([]string, 1)
+	benchmarksFillstorage(storage, b)
+
+	b.Cleanup(storage.Shutdown)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		storage.ReadTo(1, 0, readTo)
+	}
+}
+
+func BenchmarkEventStorage_CharReadToOffset10000(b *testing.B) {
+	storage, _ := New(b.TempDir())
+	readTo := make([]string, 1)
+	benchmarksFillstorage(storage, b)
+	b.Cleanup(storage.Shutdown)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		storage.ReadTo(1, 10000, readTo)
+	}
+}
+
+func benchmarksFillstorage(storage *eventStorage, b *testing.B) {
+	raw := []byte("s")
+
+	for i := 0; i < 300000; i++ {
 		_, _ = storage.Write(raw)
 	}
 
