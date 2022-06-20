@@ -13,10 +13,10 @@ for transmission somewhere. For example, to exchange data between several applic
 
 ```console
 cpu: Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz  
-BenchmarkWriteChar-16                        63323869       19.42 ns/op         4  B/op         0 allocs/op
-BenchmarkEventStorage_ReadChar-16              323152        3665 ns/op         24 B/op         1 allocs/op
-BenchmarkEventStorage_CharReadTo-16            331111        3637 ns/op          8 B/op         1 allocs/op
-BenchmarkEventStorage_CharReadToOffset10000-16  43273       27300 ns/op          8 B/op         1 allocs/op
+BenchmarkWriteChar-16                        63323869       19.42 ns/op     4  B/op     0 allocs/op
+BenchmarkEventStorage_ReadChar-16              323152        3665 ns/op     24 B/op     1 allocs/op
+BenchmarkEventStorage_CharReadTo-16            331111        3637 ns/op      8 B/op     1 allocs/op
+BenchmarkEventStorage_CharReadToOffset10000-16  43273       27300 ns/op      8 B/op     1 allocs/op
 ````
 
 ## Installation
