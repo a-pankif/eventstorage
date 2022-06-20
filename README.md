@@ -6,6 +6,9 @@
 
 This is an event logger with high-speed recording and event reading capability. Supports log rotation.
 
+Well suited for tasks where you need to make a lot of writes (tens of thousands per second) and sometimes read them
+for transmission somewhere. For example, to exchange data between several applications, storages, clusters, etc.
+
 ## Benchmarks
 
 ```console
@@ -22,7 +25,6 @@ go get -u github.com/pankif/eventstorage
 ```
 
 ## Examples
-More examples you can find into [examples](https://github.com/pankif/eventstorage/tree/main/examples).
 
 ```go
 package main
@@ -51,6 +53,7 @@ func main()  {
     fmt.Println(storage.Read(1, 0)) 
 }
 ```
+More examples you can find into [here](https://github.com/pankif/eventstorage/tree/main/examples).
 
 ## Tests
 - Coverage percent `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`
