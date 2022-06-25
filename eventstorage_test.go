@@ -101,7 +101,7 @@ func Test_eventStorage_autoFlushCount(t *testing.T) {
 }
 
 func Test_eventStorage_autoFlushCountFailedFlush(t *testing.T) {
-	storage := eventStorage{
+	storage := EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
@@ -115,7 +115,7 @@ func Test_eventStorage_autoFlushCountFailedFlush(t *testing.T) {
 }
 
 func Test_eventStorage_WriteFailedRotateFlush(t *testing.T) {
-	storage := eventStorage{
+	storage := EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 1},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
@@ -130,7 +130,7 @@ func Test_eventStorage_WriteFailedRotateFlush(t *testing.T) {
 }
 
 func Test_eventStorage_autoFlushCountSetterGetter(t *testing.T) {
-	storage := eventStorage{
+	storage := EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
@@ -238,7 +238,7 @@ func BenchmarkEventStorage_CharReadToOffset10000(b *testing.B) {
 	}
 }
 
-func benchmarksFillstorage(storage *eventStorage, b *testing.B) {
+func benchmarksFillstorage(storage *EventStorage, b *testing.B) {
 	raw := []byte("s")
 
 	for i := 0; i < 300000; i++ {
@@ -249,7 +249,7 @@ func benchmarksFillstorage(storage *eventStorage, b *testing.B) {
 	b.ResetTimer()
 }
 
-func benchmarksInitStorage(b *testing.B) *eventStorage {
+func benchmarksInitStorage(b *testing.B) *EventStorage {
 	storage, _ := New(b.TempDir())
 	storage.SetWriteFileMaxSize(1000 * MB)
 	b.Cleanup(storage.Shutdown)

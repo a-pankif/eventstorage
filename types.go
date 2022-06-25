@@ -26,7 +26,7 @@ var (
 	eventsFileNameTemplate     = "events.%d"
 )
 
-type eventStorage struct {
+type EventStorage struct {
 	basePath      string   // Root path of events storage.
 	filesRegistry *os.File // File with list of exists events files.
 	write         *write   // Variables for write events.

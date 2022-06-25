@@ -7,7 +7,7 @@ import (
 )
 
 func Test_eventStorage_initRegistryFile(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		basePath: t.TempDir(),
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -22,7 +22,7 @@ func Test_eventStorage_initRegistryFile(t *testing.T) {
 }
 
 func Test_eventStorage_initRegistryFileFailed(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		basePath: string([]byte{0}),
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -35,7 +35,7 @@ func Test_eventStorage_initRegistryFileFailed(t *testing.T) {
 }
 
 func Test_eventStorage_appendInRegistryFile(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		basePath: t.TempDir(),
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -68,7 +68,7 @@ func Test_eventStorage_appendInRegistryFile(t *testing.T) {
 }
 
 func Test_eventStorage_initLogFileWithoutRegistry(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
@@ -81,7 +81,7 @@ func Test_eventStorage_initLogFileWithoutRegistry(t *testing.T) {
 }
 
 func Test_eventStorage_initLogFile(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		basePath: t.TempDir(),
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -97,7 +97,7 @@ func Test_eventStorage_initLogFile(t *testing.T) {
 }
 
 func Test_eventStorage_initLogFileFailed(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		basePath: t.TempDir(),
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -115,7 +115,7 @@ func Test_eventStorage_initLogFileFailed(t *testing.T) {
 }
 
 func Test_eventStorage_rotateLogFileFailedCloseOld(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
@@ -128,7 +128,7 @@ func Test_eventStorage_rotateLogFileFailedCloseOld(t *testing.T) {
 }
 
 func Test_eventStorage_rotateLogFile(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		basePath: t.TempDir(),
 		write:    &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:     &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
@@ -160,7 +160,7 @@ func Test_eventStorage_rotateLogFile(t *testing.T) {
 }
 
 func Test_eventStorage_openLogFileFailedAppend(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}
@@ -172,7 +172,7 @@ func Test_eventStorage_openLogFileFailedAppend(t *testing.T) {
 }
 
 func Test_eventStorage_SetLogFileSize(t *testing.T) {
-	s := &eventStorage{
+	s := &EventStorage{
 		write: &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:  &read{readableFiles: make(readableFiles), buf: new(strings.Builder)},
 	}

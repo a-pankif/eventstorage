@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func (s *eventStorage) openEventsFile(number int, appendRegistry bool) (*os.File, error) {
+func (s *EventStorage) openEventsFile(number int, appendRegistry bool) (*os.File, error) {
 	fileName := s.getFileName(number)
 	filePath := s.getFilePath(fileName)
 
@@ -37,7 +37,7 @@ func (s *eventStorage) openEventsFile(number int, appendRegistry bool) (*os.File
 	return writeFile, nil
 }
 
-func (s *eventStorage) rotateEventsFile() error {
+func (s *EventStorage) rotateEventsFile() error {
 	if err := s.write.file.Close(); err != nil {
 		return errors.New("failed close old events file: " + err.Error())
 	}
@@ -55,7 +55,7 @@ func (s *eventStorage) rotateEventsFile() error {
 	return nil
 }
 
-func (s *eventStorage) initEventsFile() error {
+func (s *EventStorage) initEventsFile() error {
 	if s.filesRegistry == nil {
 		return errors.New("cant init events file without registry")
 	}
@@ -79,7 +79,7 @@ func (s *eventStorage) initEventsFile() error {
 	return nil
 }
 
-func (s *eventStorage) initFilesRegistry() error {
+func (s *EventStorage) initFilesRegistry() error {
 	filePath := s.getFilePath(registryFileName)
 	registry, err := os.OpenFile(filePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 
@@ -105,28 +105,28 @@ func (s *eventStorage) initFilesRegistry() error {
 	return nil
 }
 
-func (s *eventStorage) filesCount() int {
+func (s *EventStorage) filesCount() int {
 	return len(s.read.readableFiles)
 }
 
-func (s *eventStorage) calculateWriteFileSize() int64 {
+func (s *EventStorage) calculateWriteFileSize() int64 {
 	info, _ := s.write.file.Stat()
 	return info.Size()
 }
 
-func (s *eventStorage) SetWriteFileMaxSize(size int64) {
+func (s *EventStorage) SetWriteFileMaxSize(size int64) {
 	s.write.fileMaxSize = size
 }
 
-func (s *eventStorage) getFileName(number int) string {
+func (s *EventStorage) getFileName(number int) string {
 	return fmt.Sprintf(eventsFileNameTemplate, number)
 }
 
-func (s *eventStorage) getFilePath(fileName string) string {
+func (s *EventStorage) getFilePath(fileName string) string {
 	return s.basePath + string(os.PathSeparator) + fileName
 }
 
-func (s *eventStorage) Shutdown() {
+func (s *EventStorage) Shutdown() {
 	s.write.locker.Lock()
 	s.read.locker.Lock()
 

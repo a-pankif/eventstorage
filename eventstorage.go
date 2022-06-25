@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-func New(basePath string) (*eventStorage, error) {
-	s := &eventStorage{
+func New(basePath string) (*EventStorage, error) {
+	s := &EventStorage{
 		basePath:  basePath,
 		write:     &write{buf: new(bytes.Buffer), fileMaxSize: 100 * MB},
 		read:      &read{readableFiles: make(readableFiles), buf: new(strings.Builder), readBuf: make([]byte, readBufLimit)},
@@ -29,7 +29,7 @@ func New(basePath string) (*eventStorage, error) {
 	return s, nil
 }
 
-func (s *eventStorage) Write(data []byte) (writtenLen int64, err error) {
+func (s *EventStorage) Write(data []byte) (writtenLen int64, err error) {
 	s.write.locker.Lock()
 	defer s.write.locker.Unlock()
 
@@ -60,7 +60,7 @@ func (s *eventStorage) Write(data []byte) (writtenLen int64, err error) {
 	return
 }
 
-func (s *eventStorage) flush() (count int, err error) {
+func (s *EventStorage) flush() (count int, err error) {
 	if s.write.insertsCount > 0 {
 		if _, err = s.write.file.Write(s.write.buf.Bytes()); err != nil {
 			return 0, errors.New("flush failed: " + err.Error())
@@ -74,21 +74,21 @@ func (s *eventStorage) flush() (count int, err error) {
 	return
 }
 
-func (s *eventStorage) Flush() (count int, err error) {
+func (s *EventStorage) Flush() (count int, err error) {
 	s.write.locker.Lock()
 	defer s.write.locker.Unlock()
 	return s.flush()
 }
 
-func (s *eventStorage) SetAutoFlushCount(count int) {
+func (s *EventStorage) SetAutoFlushCount(count int) {
 	s.write.autoFlushCount = count
 }
 
-func (s *eventStorage) GetAutoFlushCount() int {
+func (s *EventStorage) GetAutoFlushCount() int {
 	return s.write.autoFlushCount
 }
 
-func (s *eventStorage) SetAutoFlushTime(period time.Duration) error {
+func (s *EventStorage) SetAutoFlushTime(period time.Duration) error {
 	if period <= 0 {
 		return ErrAutoFlushTimeTooLow
 	}
@@ -114,7 +114,7 @@ func (s *eventStorage) SetAutoFlushTime(period time.Duration) error {
 	return nil
 }
 
-func (s *eventStorage) ReadTo(count int, offset int, events []string) {
+func (s *EventStorage) ReadTo(count int, offset int, events []string) {
 	s.read.locker.Lock()
 	defer s.read.locker.Unlock()
 
@@ -161,7 +161,7 @@ func (s *eventStorage) ReadTo(count int, offset int, events []string) {
 	}
 }
 
-func (s *eventStorage) Read(count int, offset int) []string {
+func (s *EventStorage) Read(count int, offset int) []string {
 	events := make([]string, count)
 	s.ReadTo(count, offset, events)
 	return events
