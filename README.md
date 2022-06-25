@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/pankif/eventstorage)](https://goreportcard.com/report/github.com/pankif/eventstorage)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/pankif/eventstorage/blob/main/LICENSE)
 
-This is an event logger with high-speed recording and event reading capability. Supports log rotation.
+Eventstorage - this is an event logger with high-speed recording and event reading capability. Supports log rotation.
 
 Well suited for tasks where you need to make a lot of writes (tens of thousands per second) and sometimes read them
 for transmission somewhere. For example, to exchange data between several applications, storages, clusters, etc.
