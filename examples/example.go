@@ -27,6 +27,17 @@ func main() {
 	fmt.Println(storage.Read(1, 0))
 }
 
+func readOffset() {
+	storage, _ := eventstorage.New("./")
+	defer storage.Shutdown()
+
+	to := make([]string, 2)
+
+	storage.ReadTo(2, 10, to)
+
+	fmt.Println(to)
+}
+
 func fillManyFilesAndRead() {
 	storage, _ := eventstorage.New("./")
 	defer storage.Shutdown()

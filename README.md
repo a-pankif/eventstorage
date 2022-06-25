@@ -59,6 +59,9 @@ More examples you can find into [here](https://github.com/pankif/eventstorage/tr
 - Coverage percent `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out`
 - Coverage map `go test ./ -coverprofile c.out && go tool cover -html=c.out`
 - `go test -bench=. --benchmem`
+- `go test -bench=BenchmarkWriteChar -benchmem -cpuprofile profile.out`
+- `go test -bench=BenchmarkWriteChar -benchmem -memprofile profile.out`
+- `go tool pprof profile.out`
 
 ```console
 github.com/pankif/eventstorage  0.162s  coverage: 95.0% of statements
